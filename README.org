@@ -31,9 +31,9 @@
   #+end_src
   The argument =<history_file>= is optional.  If omitted, a determination is
   made based on the value of the =SHELL= environment variable:
-  - bash uses =.bash_history=
-  - zsh uses =.zsh_history=
-  - csh and tcsh use =.history=
+  - =bash= uses =.bash_history=
+  - =zsh= uses =.zsh_history=
+  - =csh= and =tcsh= use =.history=
 * Configure
   =command_line_lint= gives better results under the following conditions
   (it will tell you about these, too):
@@ -45,7 +45,7 @@
     =erasedups=.
   - If you use the bash shell, ~shopt histappend~ should be set so that multiple
     concurrent shell sessions can all add to your =.bash_history=.  If you use
-    zsh, ~APPEND_HISTORY~ should be set likewise.
+    =zsh=, ~APPEND_HISTORY~ should be set likewise.
 
   This script supports use of [[http://no-color.org][NO_COLOR]] to disable color output:
   #+begin_src bash

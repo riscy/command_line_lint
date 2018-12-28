@@ -8,12 +8,11 @@ you type should be simple and require minimal typing.  The report will contain:
 
 - comprehensive lists of commands you use, with and without arguments
 - suggestions for ways to shorten commands (aliases, alternative syntax)
-- a subset Shellcheck lints (if it's installed); many of these are
+- a subset of lints from Shellcheck (if it's installed); many of these are
   useful and can warn against dangerous habits
 
 This code is an early prototype and currently has weak support for shells
 besides bash.
-
 """
 import re
 import os
@@ -28,9 +27,10 @@ from collections import Counter
 NUM_COMMANDS = 5
 NUM_WITH_ARGUMENTS = 10
 NUM_SHELLCHECK = 10
-ENV_INDENT = 13
+ENV_INDENT = 20
 
-NO_COLOR = os.environ.get('NO_COLOR')  # https://no-color.org
+# these define the color of the report (https://no-color.org)
+NO_COLOR = os.environ.get('NO_COLOR')
 COLOR_DEFAULT = '' if NO_COLOR else '\033[0m'
 COLOR_HEADER = '' if NO_COLOR else '\033[7m'
 COLOR_WARN = '' if NO_COLOR else '\033[31m'
@@ -57,7 +57,7 @@ def report_environment():
 
 
 def report_favorites(commands, top_n=NUM_COMMANDS):
-    """Report for user's {top_n} most common commands."""
+    """Report user's {top_n} favorite commands."""
     _print_header("Favorite {}".format(top_n), newline=False)
     prefix_count = Counter(cmd.split()[0] for cmd in commands if ' ' in cmd)
     for prefix, count in prefix_count.most_common(top_n):
@@ -65,24 +65,24 @@ def report_favorites(commands, top_n=NUM_COMMANDS):
 
 
 def report_commands_with_arguments(commands, top_n=NUM_WITH_ARGUMENTS):
-    """Report for user's {top_n} most common commands (with args)."""
-    _print_header("Top {} with args".format(top_n))
+    """Report user's {top_n} most common commands (with args)."""
+    _print_header("Top {} with arguments".format(top_n))
     for cmd, count in Counter(commands).most_common(top_n):
         _print_command_stats(cmd, count, len(commands))
         if not _is_in_histignore(cmd):
-            any(
+            sum(
                 lint(cmd, count, len(commands)) for lint in [
                     _lint_alias,
                     _lint_add_to_histignore,
                 ])
+    _tip("Your commands tend toward {} chars with {} argument(s).".format(
+        int(sum(len(cmd) for cmd in commands) / len(commands)),
+        int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))))
 
 
 def report_miscellaneous(commands):
     """Report for some miscellaneous ways to reduce typing."""
-    _print_header('Command length')
-    print("Your commands tend to be {} chars long with {} argument(s).".format(
-        int(sum(len(cmd) for cmd in commands) / len(commands)),
-        int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))))
+    _print_header('Miscellaneous')
     for lint in [
             _lint_rename,
             _lint_cd_home,
@@ -121,24 +121,25 @@ def report_shellcheck(history_file, top_n=NUM_SHELLCHECK):
                 ))
 
 
-def _tip(tip, indent=0):
-    print(' ' * indent + "{}^-- {}{}".format(COLOR_TIP, tip, COLOR_DEFAULT))
+def _tip(tip, arrow_at=0):
+    arrow = ' ' * arrow_at + '^-- ' if arrow_at else '- '
+    print(COLOR_TIP + arrow + tip + COLOR_DEFAULT)
 
 
 def _warn(warn):
-    print("{}WARNING: {}{}".format(COLOR_WARN, warn, COLOR_DEFAULT))
+    print(COLOR_WARN + "WARNING: {}".format(warn) + COLOR_DEFAULT)
 
 
 def _print_header(header, newline=True):
     if newline:
-        print()
+        print('')
     print(COLOR_HEADER + '{} '.format(header).ljust(79) + COLOR_DEFAULT)
 
 
 def _print_environment_variable(var):
     print("{}=> {}".format(
         var.ljust(ENV_INDENT),
-        os.environ.get(var, '<default>'),
+        os.environ.get(var, '<unset>'),
     ))
 
 
@@ -211,7 +212,7 @@ def _lint_histfile():
     if os.stat(history_file).st_mode & stat.S_IROTH:
         _tip(
             "Other users can read {}!".format(history_file),
-            indent=ENV_INDENT + 3,
+            arrow_at=ENV_INDENT + 3,
         )
         return True
     return False
@@ -244,10 +245,8 @@ def _lint_rename(cmd):
         )
         if float(len(new_cmd)) / len(cmd) <= short_enough:
             print(' '.join(tokens))
-            _tip(
-                "These args can be shortened: {} {}".format(prefix, new_cmd),
-                len(prefix) + 1,
-            )
+            _tip('It can be shorter to write "{} {}".'.format(prefix, new_cmd),
+                 len(prefix) + 1)
             return True
     return False
 
@@ -266,8 +265,7 @@ def _history_file():
     else:
         history_file = os.path.join(os.path.expanduser('~'), '.history')
     if not os.path.isfile(history_file):
-        _warn("Your shell '{}' has no history file '{}'.".format(
-            os.environ.get('SHELL'), history_file))
+        _warn("History file '{}' not found.".format(history_file))
         sys.exit(1)
     return history_file
 
