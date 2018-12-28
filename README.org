@@ -1,0 +1,66 @@
+#+TITLE: Command-Line Lint
+#+OPTIONS: toc:3 author:t creator:nil num:nil
+#+AUTHOR: Chris Rayner
+#+EMAIL: dchrisrayner@gmail.com
+
+# [[https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
+
+Lint your command-line history.
+
+* Description
+
+  This script generates a simple report against your command-line history and
+  suggests workflow improvements.  It has the opinion that most of the commands
+  you type should be simple and require minimal typing.  The report will
+  contain:
+
+  - comprehensive lists of commands you use, with and without arguments
+  - suggestions for ways to shorten commands (aliases, alternative syntax)
+  - a subset of lints from [[https://www.shellcheck.net][Shellcheck]], if installed; many of these can warn
+    against dangerous habits
+
+  This script does not use the network, and it doesn't move or store your
+  command history anywhere.  It should be fairly portable and runs on Python 2.7
+  or 3+ and requires "only" the standard library.
+
+  This code is an early prototype and currently has weak support for shells
+  besides bash.
+* Run
+  Download [[https://raw.githubusercontent.com/riscy/command_line_lint/master/command_line_lint.py][command_line_lint.py]] and run it using Python 2.7 or 3+:
+  #+begin_src
+  python command_line_lint.py <history_file>
+  #+end_src
+  The argument =<history_file>= is optional.  If omitted, a determination is
+  made based on the value of the =SHELL= environment variable:
+  - bash uses =.bash_history=
+  - zsh uses =.zsh_history=
+  - csh and tcsh use =.history=
+* Configure
+  =command_line_lint= gives better results under the following conditions
+  (it will tell you about these, too):
+  - The =HISTFILE= and =HISTFILESIZE= environment variables should be
+    sufficiently large to support meaningful summaries of your usage.  The
+    default (presumably 500) is too small -- try 5000.
+  - Retaining duplicate entries is important for being able to determine what
+    you do the most, so =HISTCONTROL= should not contain =ignoredups= or
+    =erasedups=.
+  - If you use the bash shell, ~shopt histappend~ should be set so that multiple
+    concurrent shell sessions can all add to your =.bash_history=.  If you use
+    zsh, ~APPEND_HISTORY~ should be set likewise.
+
+  This script supports use of [[http://no-color.org][NO_COLOR]] to disable color output:
+  #+begin_src bash
+  NO_COLOR=1 python command_line_lint.py
+  #+end_src
+
+* Future
+  Because those who do not learn from history are doomed to =!!=,
+  additional reporting around some of the following would be useful:
+  - Command fingerprinting to sort out common typos (~shopt dirspell~, if it
+    exists, can be used to fix typos in =cd=)
+  - Security checks in addition to readability of history file (for example
+    warnings about plaintext passwords, etc.)
+  - Analyzing sequences of commands for improvements (e.g., sometimes
+    dry-running a command like ~rm -rf ./*~ with ~ls ./*~ is a good idea;
+    switching back and forth between directories can use ~cd -~; switching
+    back and forth between git branches can use ~git checkout -~; etc.)
