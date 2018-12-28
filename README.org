@@ -5,10 +5,9 @@
 
 # [[https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
 
-Lint your command-line history.
+[[file:img/screenshot.png]]
 
 * Description
-
   This script generates a simple report against your command-line history and
   suggests workflow improvements.  It has the opinion that most of the commands
   you type should be simple and require minimal typing.  The report will
