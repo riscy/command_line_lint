@@ -252,18 +252,17 @@ def _lint_rename(cmd):
 
 
 def _history_file():
+    home = os.path.expanduser('~')
     if len(sys.argv) > 1:
         history_file = sys.argv[1]
     elif os.environ.get('HISTFILE'):
-        history_file = os.environ.get('HISTFILE')
+        # typical zsh:
+        history_file = os.path.join(home, os.environ.get('HISTFILE'))
     elif _shell() == 'bash':
-        history_file = os.path.join(os.path.expanduser('~'), '.bash_history')
-    elif _shell() == 'zsh':
-        history_file = os.path.join(os.path.expanduser('~'), '.zsh_history')
-    elif _shell() == 'csh' or _shell() == 'tcsh':
-        history_file = os.path.join(os.path.expanduser('~'), '.history')
+        history_file = os.path.join(home, '.bash_history')
     else:
-        history_file = os.path.join(os.path.expanduser('~'), '.history')
+        # typical .csh or .tcsh:
+        history_file = os.path.join(home, '.history')
     if not os.path.isfile(history_file):
         _warn("History file '{}' not found.".format(history_file))
         sys.exit(1)
