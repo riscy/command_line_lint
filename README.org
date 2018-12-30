@@ -3,7 +3,7 @@
 #+AUTHOR: Chris Rayner
 #+EMAIL: dchrisrayner@gmail.com
 
-[[https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
+[[https://travis-ci.org/riscy/command_line_lint][https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
 
 [[file:img/screenshot.png]]
 
@@ -36,15 +36,14 @@
 * Configure
   =command_line_lint= gives better results under the following conditions
   (it will tell you about these, too):
-  - The =HISTFILE= and =HISTFILESIZE= environment variables should be
-    sufficiently large to support meaningful summaries of your usage.  The
-    default (presumably 500) is too small -- try 5000.
+  - The =HISTSIZE= environment variable should be large enough to produce useful
+    usage summaries.  The defaults tend to be too small -- try 5000.
   - Retaining duplicate entries is important for being able to determine what
-    you do the most, so =HISTCONTROL= should not contain =ignoredups= or
-    =erasedups=.
-  - If you use the bash shell, ~shopt histappend~ should be set so that multiple
+    you do the most, so variables/options like =bash='s =HISTCONTROL= or =zsh='s
+    =histignorealldups= should be set appropriately.
+  - If you use =bash=, ~shopt histappend~ should be set so that multiple
     concurrent shell sessions can all add to your =.bash_history=.  If you use
-    =zsh=, ~APPEND_HISTORY~ should be set likewise.
+    =zsh=, ~setopt appendhistory~ should be set likewise.
 
   This script supports use of [[http://no-color.org][NO_COLOR]] to disable color output:
   #+begin_src bash
