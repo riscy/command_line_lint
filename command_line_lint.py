@@ -43,6 +43,7 @@ def report_overview(commands):
     _print_header("Overview", newline=False)
     _print_environment_variable('SHELL')
     _print_environment_variable('HISTFILE', using=_history_file())
+    _lint_command_lengths(commands)
     _lint_histfile()
     _print_environment_variable('HISTSIZE')
     _lint_histsize()
@@ -59,14 +60,11 @@ def report_overview(commands):
         _print_environment_variable('HISTORY_IGNORE')
         _lint_zsh_dupes()
         _lint_zsh_histappend()
-    _info("Your commands tend to be {} chars long with {} argument(s)".format(
-        int(sum(len(cmd) for cmd in commands) / len(commands)),
-        int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))))
 
 
 def report_favorites(commands, top_n=NUM_COMMANDS):
     """Report user's {top_n} favorite commands."""
-    _print_header("Favorite {}".format(top_n), newline=False)
+    _print_header("Favorite {}".format(top_n))
     prefix_count = Counter(cmd.split()[0] for cmd in commands if ' ' in cmd)
     for prefix, count in prefix_count.most_common(top_n):
         _print_command_stats(prefix, count, len(commands))
@@ -167,8 +165,16 @@ def _lint_command_alias(cmd, count, total):
         return False
     suggestion = ''.join(
         word[0] for word in cmd.split() if re.match(r'\w', word))
-    _info('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
+    _tip('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
     return True
+
+
+def _lint_command_cd_home(cmd):
+    if _standardize(cmd) in {'cd ~', 'cd ~/', 'cd $HOME'}:
+        print(cmd)
+        _tip('Useless argument. Just use "cd"', arrow_at=3)
+        return True
+    return False
 
 
 def _lint_command_ignore(cmd, count, total):
@@ -182,12 +188,12 @@ def _lint_command_ignore(cmd, count, total):
     return False
 
 
-def _lint_command_cd_home(cmd):
-    if _standardize(cmd) in {'cd ~', 'cd ~/', 'cd $HOME'}:
-        print(cmd)
-        _tip('Useless argument. Just use "cd"', arrow_at=3)
-        return True
-    return False
+def _lint_command_lengths(commands):
+    output = "Commands in here tend to be {} characters long, with ".format(
+        int(sum(len(cmd) for cmd in commands) / len(commands)))
+    args = int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))
+    output += '1 argument.' if args == 1 else "{} arguments.".format(args)
+    _info(output, ENV_WIDTH + 3)
 
 
 def _lint_command_rename(cmd):
@@ -206,8 +212,8 @@ def _lint_command_rename(cmd):
         )
         if float(len(new_cmd)) / len(cmd) <= short_enough:
             print(' '.join(tokens))
-            _tip('It can be shorter to write "{} {}"'.format(prefix, new_cmd),
-                 len(prefix) + 1)
+            _info('It can be shorter to write "{} {}"'.format(prefix, new_cmd),
+                  len(prefix) + 1)
             return True
     return False
 
@@ -273,8 +279,11 @@ def _lint_histfile():
     history_file = _history_file()
     st_mode = os.stat(history_file).st_mode
     if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
-        _warn('Others can read your history! '
-              'Run "chmod 600 {}"'.format(history_file))
+        _warn(
+            'Other users can read this file! '
+            'Run "chmod 600 {}"'.format(history_file),
+            ENV_WIDTH + 3,
+        )
 
 
 def _lint_histsize():
