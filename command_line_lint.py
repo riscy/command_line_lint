@@ -325,7 +325,10 @@ def main():
     report_environment()
     history_file = _history_file()
     with open(history_file) as stream:
-        commands = [cmd.strip() for cmd in stream.readlines() if cmd.strip()]
+        commands = [
+            cmd.strip() for cmd in stream.readlines()
+            if cmd.strip() and not cmd.startswith('#')
+        ]
     report_favorites(commands)
     report_commands_with_arguments(commands)
     report_miscellaneous(commands)
