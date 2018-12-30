@@ -40,9 +40,9 @@ COLOR_TIP = '' if NO_COLOR else '\033[32m'
 SC_IGNORE = [1089, 1090, 1091, 2086, 2103, 2148, 2154, 2164, 2224, 2230]
 
 
-def report_environment():
-    """Report on some common environment settings."""
-    _print_header("Environment", newline=False)
+def report_overview(commands):
+    """Report on some common environment settings, etc."""
+    _print_header("Overview", newline=False)
     _print_environment_variable('SHELL')
     _print_environment_variable('HISTFILE')
     _lint_histfile()
@@ -322,13 +322,13 @@ def _standardize(cmd):
 
 def main():
     """Run all reports."""
-    report_environment()
     history_file = _history_file()
     with open(history_file) as stream:
         commands = [
             cmd.strip() for cmd in stream.readlines()
             if cmd.strip() and not cmd.startswith('#')
         ]
+    report_overview(commands)
     report_favorites(commands)
     report_commands_with_arguments(commands)
     report_miscellaneous(commands)
