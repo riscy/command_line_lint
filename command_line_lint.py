@@ -31,7 +31,8 @@ NO_COLOR = os.environ.get('NO_COLOR')
 COLOR_DEFAULT = '' if NO_COLOR else '\033[0m'
 COLOR_HEADER = '' if NO_COLOR else '\033[7m'
 COLOR_WARN = '' if NO_COLOR else '\033[31m'
-COLOR_TIP = '' if NO_COLOR else '\033[32m'
+COLOR_INFO = '' if NO_COLOR else '\033[32m'
+COLOR_TIP = '' if NO_COLOR else '\033[33m'
 
 # shellcheck errors and warnings that are not relevant
 SC_IGNORE = [1089, 1090, 1091, 2086, 2103, 2148, 2154, 2164, 2224, 2230]
@@ -58,7 +59,7 @@ def report_overview(commands):
         _print_environment_variable('HISTORY_IGNORE')
         _lint_zsh_dupes()
         _lint_zsh_histappend()
-    _tip("Your commands tend to be {} chars long with {} argument(s)".format(
+    _info("Your commands tend to be {} chars long with {} argument(s)".format(
         int(sum(len(cmd) for cmd in commands) / len(commands)),
         int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))))
 
@@ -125,6 +126,11 @@ def report_shellcheck(top_n=NUM_SHELLCHECK):
                 ))
 
 
+def _info(info, arrow_at=0):
+    arrow = ' ' * arrow_at + '^-- ' if arrow_at else '- '
+    print(COLOR_INFO + arrow + info + COLOR_DEFAULT)
+
+
 def _tip(tip, arrow_at=0):
     arrow = ' ' * arrow_at + '^-- ' if arrow_at else '- '
     print(COLOR_TIP + arrow + tip + COLOR_DEFAULT)
@@ -142,10 +148,9 @@ def _print_header(header, newline=True):
 
 
 def _print_environment_variable(var, using=''):
+    value = '"' + os.environ.get(var) + '"' if var in os.environ else 'UNSET'
     if using:
-        value = '<using "{}">'.format(using)
-    else:
-        value = os.environ.get(var, '<unset>')
+        value += ' -- using "{}"'.format(using)
     print("{}=> {}".format(var.ljust(ENV_WIDTH), value))
 
 
@@ -162,7 +167,7 @@ def _lint_command_alias(cmd, count, total):
         return False
     suggestion = ''.join(
         word[0] for word in cmd.split() if re.match(r'\w', word))
-    _tip('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
+    _info('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
     return True
 
 
