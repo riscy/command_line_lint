@@ -24,7 +24,7 @@ from collections import Counter
 NUM_COMMANDS = 5
 NUM_WITH_ARGUMENTS = 10
 NUM_SHELLCHECK = 10
-ENV_INDENT = 20
+ENV_WIDTH = 20
 
 # define the colors of the report (or none), per https://no-color.org
 NO_COLOR = os.environ.get('NO_COLOR')
@@ -41,7 +41,7 @@ def report_overview(commands):
     """Report on some common environment settings, etc."""
     _print_header("Overview", newline=False)
     _print_environment_variable('SHELL')
-    _print_environment_variable('HISTFILE')
+    _print_environment_variable('HISTFILE', using=_history_file())
     _lint_histfile()
     _print_environment_variable('HISTSIZE')
     _lint_histsize()
@@ -58,6 +58,9 @@ def report_overview(commands):
         _print_environment_variable('HISTORY_IGNORE')
         _lint_zsh_dupes()
         _lint_zsh_histappend()
+    _tip("Your commands tend to be {} chars long with {} argument(s)".format(
+        int(sum(len(cmd) for cmd in commands) / len(commands)),
+        int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))))
 
 
 def report_favorites(commands, top_n=NUM_COMMANDS):
@@ -79,9 +82,6 @@ def report_commands_with_arguments(commands, top_n=NUM_WITH_ARGUMENTS):
                     _lint_command_alias,
                     _lint_command_ignore,
                 ])
-    _tip("Your commands tend toward {} chars with {} argument(s).".format(
-        int(sum(len(cmd) for cmd in commands) / len(commands)),
-        int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))))
 
 
 def report_miscellaneous(commands):
@@ -94,7 +94,7 @@ def report_miscellaneous(commands):
         any(lint(cmd) for cmd in set(commands))
 
 
-def report_shellcheck(history_file, top_n=NUM_SHELLCHECK):
+def report_shellcheck(top_n=NUM_SHELLCHECK):
     """Report containing lints from 'Shellcheck'."""
     _print_header('Shellcheck')
     if not _is_shellcheck_installed():
@@ -105,7 +105,7 @@ def report_shellcheck(history_file, top_n=NUM_SHELLCHECK):
             "--exclude={}".format(','.join(str(cc) for cc in SC_IGNORE)),
             "--shell={}".format(_shell()),
         ]
-        check_output(['shellcheck', args[0], args[1], history_file])
+        check_output(['shellcheck', args[0], args[1], _history_file()])
         print('Nothing to report.')
         return
     except CalledProcessError as err:
@@ -130,8 +130,9 @@ def _tip(tip, arrow_at=0):
     print(COLOR_TIP + arrow + tip + COLOR_DEFAULT)
 
 
-def _warn(warn):
-    print(COLOR_WARN + "WARNING: {}".format(warn) + COLOR_DEFAULT)
+def _warn(warn, arrow_at=0):
+    arrow = ' ' * arrow_at + '^-- ' if arrow_at else '- '
+    print(COLOR_WARN + arrow + warn + COLOR_DEFAULT)
 
 
 def _print_header(header, newline=True):
@@ -140,11 +141,12 @@ def _print_header(header, newline=True):
     print(COLOR_HEADER + '{} '.format(header).ljust(79) + COLOR_DEFAULT)
 
 
-def _print_environment_variable(var):
-    print("{}=> {}".format(
-        var.ljust(ENV_INDENT),
-        os.environ.get(var, '<unset>'),
-    ))
+def _print_environment_variable(var, using=''):
+    if using:
+        value = '<using "{}">'.format(using)
+    else:
+        value = os.environ.get(var, '<unset>')
+    print("{}=> {}".format(var.ljust(ENV_WIDTH), value))
 
 
 def _print_command_stats(cmd, count, total):
@@ -199,7 +201,7 @@ def _lint_command_rename(cmd):
         )
         if float(len(new_cmd)) / len(cmd) <= short_enough:
             print(' '.join(tokens))
-            _tip('It can be shorter to write "{} {}".'.format(prefix, new_cmd),
+            _tip('It can be shorter to write "{} {}"'.format(prefix, new_cmd),
                  len(prefix) + 1)
             return True
     return False
@@ -215,22 +217,24 @@ def _lint_bash_histappend():
 
 
 def _lint_bash_histcontrol():
-    if _shell() in {'bash', 'sh'}:
-        histcontrol = os.environ.get('HISTCONTROL', '')
-        if 'ignoredups' in histcontrol or 'erasedups' in histcontrol:
-            _tip(
-                'Unset "ignoredups" and "erasedups" to retain more history',
-                arrow_at=ENV_INDENT + 3)
+    if _shell() not in {'bash', 'sh'}:
+        return
+    histcontrol = os.environ.get('HISTCONTROL', '')
+    if 'ignoredups' in histcontrol or 'erasedups' in histcontrol:
+        _tip(
+            'Remove "ignoredups" and "erasedups" to retain more history',
+            arrow_at=ENV_WIDTH + 3)
 
 
 def _lint_bash_histfilesize():
-    if _shell() in {'bash', 'sh'}:
-        indent = ENV_INDENT + 3
-        filesize_val = int(os.environ.get('HISTFILESIZE', '0'))
-        if filesize_val < 5000:
-            _tip('Increase/set HISTFILESIZE to retain more history', indent)
-        if filesize_val < int(os.environ.get('HISTSIZE', '0')):
-            _tip("HISTFILESIZE should be larger than HISTSIZE", indent)
+    if _shell() not in {'bash', 'sh'}:
+        return
+    indent = ENV_WIDTH + 3
+    filesize_val = int(os.environ.get('HISTFILESIZE', '0'))
+    if filesize_val < 5000:
+        _tip('Increase/set HISTFILESIZE to retain more history', indent)
+    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
+        _tip('HISTFILESIZE should be larger than HISTSIZE', indent)
 
 
 def _lint_zsh_histappend():
@@ -242,38 +246,36 @@ def _lint_zsh_histappend():
 
 
 def _lint_zsh_savehist():
-    if _shell() == 'zsh':
-        indent = ENV_INDENT + 3
-        filesize_val = int(os.environ.get('SAVEHIST', '0'))
-        if filesize_val < 5000:
-            _tip('Increase/set SAVEHIST to retain more history', indent)
-        if filesize_val < int(os.environ.get('HISTSIZE', '0')):
-            _tip("SAVEHIST should be larger than HISTSIZE", indent)
+    if _shell() != 'zsh':
+        return
+    indent = ENV_WIDTH + 3
+    filesize_val = int(os.environ.get('SAVEHIST', '0'))
+    if filesize_val < 5000:
+        _tip('Increase/set SAVEHIST to retain more history', indent)
+    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
+        _tip('SAVEHIST should be larger than HISTSIZE', indent)
 
 
 def _lint_zsh_dupes():
-    if _shell() == 'zsh':
-        setopt = str(check_output([_shell(), '-i', '-c', 'setopt']))
-        if 'histignorealldups' not in setopt:
-            _tip('Run "unsetopt histignorerealdups" to retain more history')
+    if _shell() != 'zsh':
+        return
+    setopt = str(check_output([_shell(), '-i', '-c', 'setopt']))
+    if 'histignorealldups' not in setopt:
+        _tip('Run "unsetopt histignorerealdups" to retain more history')
 
 
 def _lint_histfile():
     history_file = _history_file()
-    if os.stat(history_file).st_mode & stat.S_IROTH:
-        _tip(
-            "Other users can read {}!".format(history_file),
-            arrow_at=ENV_INDENT + 3,
-        )
-        return True
-    return False
+    st_mode = os.stat(history_file).st_mode
+    if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
+        _warn('Others can read your history! '
+              'Run "chmod 600 {}"'.format(history_file))
 
 
 def _lint_histsize():
-    indent = ENV_INDENT + 3
     histsize_val = int(os.environ.get('HISTSIZE', '0'))
     if histsize_val < 5000:
-        _tip('Increase/set HISTSIZE to retain history', indent)
+        _tip('Increase/set HISTSIZE to retain history', ENV_WIDTH + 3)
 
 
 def _history_file():
@@ -289,7 +291,7 @@ def _history_file():
         # typical .csh or .tcsh:
         history_file = os.path.join(home, '.history')
     if not os.path.isfile(history_file):
-        _warn("History file '{}' not found.".format(history_file))
+        _warn('History file "{}" not found.'.format(history_file))
         sys.exit(1)
     return history_file
 
@@ -319,8 +321,7 @@ def _standardize(cmd):
 
 def main():
     """Run all reports."""
-    history_file = _history_file()
-    with open(history_file) as stream:
+    with open(_history_file()) as stream:
         commands = [
             cmd.strip() for cmd in stream.readlines()
             if cmd.strip() and not cmd.startswith('#')
@@ -329,7 +330,7 @@ def main():
     report_favorites(commands)
     report_commands_with_arguments(commands)
     report_miscellaneous(commands)
-    report_shellcheck(history_file)
+    report_shellcheck()
 
 
 if __name__ == '__main__':
