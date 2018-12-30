@@ -217,7 +217,7 @@ def _lint_bash_histappend():
         return
     histappend = str(check_output([_shell(), '-i', '-c', 'shopt histappend']))
     if r'\ton\n' not in histappend:
-        _tip('Run "shopt -s histappend" .bashrc to retain more history')
+        _tip('Run "shopt -s histappend" to retain more history')
         return True
 
 

@@ -3,7 +3,7 @@
 #+AUTHOR: Chris Rayner
 #+EMAIL: dchrisrayner@gmail.com
 
-# [[https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
+[[https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
 
 [[file:img/screenshot.png]]
 
@@ -18,7 +18,7 @@
     against dangerous habits
 
   The script does not use the network, and it doesn't move or store your command
-  history anywhere.  It should be fairly portable, running on Python 2.7 or 3+
+  history anywhere.  It should be fairly portable, running on Python 2.7 or 3.3+
   and requiring "only" the standard library.
 
   This is an early prototype and has weak support for shells besides bash.
