@@ -10,9 +10,6 @@ you type should be simple and require minimal typing.  The report will contain:
 - suggestions for ways to shorten commands (aliases, alternative syntax)
 - a subset of lints from Shellcheck (if it's installed); many of these are
   useful and can warn against dangerous habits
-
-This code is an early prototype and currently has weak support for shells
-besides bash.
 """
 import re
 import os
@@ -23,20 +20,20 @@ from subprocess import check_output, CalledProcessError
 import distutils.spawn
 from collections import Counter
 
-# these parametrize the length and format of the report:
+# parametrize the length and format of the report
 NUM_COMMANDS = 5
 NUM_WITH_ARGUMENTS = 10
 NUM_SHELLCHECK = 10
 ENV_INDENT = 20
 
-# these define the color of the report (https://no-color.org)
+# define the colors of the report (or none), per https://no-color.org
 NO_COLOR = os.environ.get('NO_COLOR')
 COLOR_DEFAULT = '' if NO_COLOR else '\033[0m'
 COLOR_HEADER = '' if NO_COLOR else '\033[7m'
 COLOR_WARN = '' if NO_COLOR else '\033[31m'
 COLOR_TIP = '' if NO_COLOR else '\033[32m'
 
-# shellcheck errors and warnings that are not really relevant:
+# shellcheck errors and warnings that are not relevant
 SC_IGNORE = [1089, 1090, 1091, 2086, 2103, 2148, 2154, 2164, 2224, 2230]
 
 

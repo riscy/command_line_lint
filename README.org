@@ -8,32 +8,31 @@
 [[file:img/screenshot.png]]
 
 * Description
-  This script generates a simple report against your command-line history and
-  suggests workflow improvements.  It has the opinion that most of the commands
-  you type should be simple and require minimal typing.  The report will
-  contain:
+  This script generates a report against your command-line history and suggests
+  workflow improvements.  Its opinion is that most commands should be simple and
+  require minimal typing.  The report contains:
 
   - comprehensive lists of commands you use, with and without arguments
   - suggestions for ways to shorten commands (aliases, alternative syntax)
   - a subset of lints from [[https://www.shellcheck.net][Shellcheck]], if installed; many of these can warn
     against dangerous habits
 
-  This script does not use the network, and it doesn't move or store your
-  command history anywhere.  It should be fairly portable and runs on Python 2.7
-  or 3+ and requires "only" the standard library.
+  The script does not use the network, and it doesn't move or store your command
+  history anywhere.  It should be fairly portable, running on Python 2.7 or 3+
+  and requiring "only" the standard library.
 
-  This code is an early prototype and currently has weak support for shells
-  besides bash.
+  This is an early prototype and has weak support for shells besides bash.
 * Run
-  Download [[https://raw.githubusercontent.com/riscy/command_line_lint/master/command_line_lint.py][command_line_lint.py]] and run it using Python 2.7 or 3+:
+  Download [[https://raw.githubusercontent.com/riscy/command_line_lint/master/command_line_lint.py][command_line_lint.py]] and run it:
   #+begin_src
-  python command_line_lint.py <history_file>
+  python command_line_lint.py <history_file>  # python 2 or 3 is fine
   #+end_src
-  The argument =<history_file>= is optional.  If omitted, a determination is
+  The =<history_file>= argument is optional.  If omitted, a determination is
   made based on the value of the =SHELL= environment variable:
   - =bash= uses =.bash_history=
-  - =zsh= uses =.zsh_history=
   - =csh= and =tcsh= use =.history=
+  - =zsh= uses the value of =HISTFILE=
+  Not all shells have support for saving a history file (fish, dash, etc.)
 * Configure
   =command_line_lint= gives better results under the following conditions
   (it will tell you about these, too):
@@ -63,3 +62,4 @@
     dry-running a command like ~rm -rf ./*~ with ~ls ./*~ is a good idea;
     switching back and forth between directories can use ~cd -~; switching
     back and forth between git branches can use ~git checkout -~; etc.)
+  - Avoid piping =wget= into =sh=
