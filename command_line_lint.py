@@ -43,7 +43,7 @@ def report_overview(commands):
     _print_header("Overview", newline=False)
     _print_environment_variable('SHELL')
     _print_environment_variable('HISTFILE', using=_history_file())
-    _lint_command_lengths(commands)
+    _lint_lengths_of_commands(commands)
     _lint_histfile()
     _print_environment_variable('HISTSIZE')
     _lint_histsize()
@@ -188,14 +188,6 @@ def _lint_command_ignore(cmd, count, total):
     return False
 
 
-def _lint_command_lengths(commands):
-    output = "Commands in here tend to be {} characters long, with ".format(
-        int(sum(len(cmd) for cmd in commands) / len(commands)))
-    args = int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))
-    output += '1 argument.' if args == 1 else "{} arguments.".format(args)
-    _info(output, ENV_WIDTH + 3)
-
-
 def _lint_command_rename(cmd):
     short_enough = 0.80
     tokens = cmd.split()
@@ -216,6 +208,14 @@ def _lint_command_rename(cmd):
                   len(prefix) + 1)
             return True
     return False
+
+
+def _lint_lengths_of_commands(commands):
+    output = "Commands average {} characters with ".format(
+        int(sum(len(cmd) for cmd in commands) / len(commands)))
+    args = int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))
+    output += '1 argument' if args == 1 else "{} arguments".format(args)
+    _info(output, ENV_WIDTH + 3)
 
 
 def _lint_bash_histappend():
