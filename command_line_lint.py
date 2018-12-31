@@ -181,10 +181,11 @@ def _lint_command_ignore(cmd, count, total):
     if len(cmd) >= 4 or count < 2 or total / count > 20:
         return False
     if _shell() in {'bash', 'sh'}:
-        _tip("Consider adding short commands to HISTIGNORE".format(cmd))
+        _tip('Consider adding frequent but short commands to HISTIGNORE')
         return True
     if _shell() == 'zsh':
-        _tip("Consider adding short commands to HISTORY_IGNORE".format(cmd))
+        _tip('Consider adding frequent but short commands to HISTORY_IGNORE')
+        return True
     return False
 
 
