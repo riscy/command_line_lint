@@ -222,10 +222,9 @@ def _lint_lengths_of_commands(commands):
 def _lint_bash_histappend():
     if _shell() not in {'bash', 'sh'}:
         return
-    histappend = str(check_output([_shell(), '-i', '-c', 'shopt histappend']))
-    if r'\ton\n' not in histappend:
+    histappend = check_output([_shell(), '-i', '-c', 'shopt']).decode('utf-8')
+    if re.search(r'histappend[ \t]+off', histappend):
         _tip('Run "shopt -s histappend" to retain more history')
-        return True
 
 
 def _lint_bash_histcontrol():
@@ -252,7 +251,7 @@ def _lint_bash_histfilesize():
 def _lint_zsh_histappend():
     if _shell() != 'zsh':
         return
-    setopt = str(check_output([_shell(), '-i', '-c', 'setopt']))
+    setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
     if 'noappendhistory' in setopt:
         _tip('Run "setopt appendhistory" to retain more history')
 
