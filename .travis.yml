@@ -1,20 +1,24 @@
 language: python
 
+os:
+  - linux
+
 python:
   - "2.7"
-  - "3.3"
   - "3.4"
   - "3.5"
-  - "3.5-dev"  # 3.5 development branch
+  - "3.5-dev"
   - "3.6"
-  - "3.6-dev"  # 3.6 development branch
-  - "3.7-dev"  # 3.7 development branch
+  - "3.6-dev"
+  - "3.7-dev"
 
 install:
+  - pip install pylint flake8
   - echo mv long_name.txt long_name.csv >> ~/.bash_history
   - echo mv long_name.txt long_name.csv >> ~/.bash_history
   - echo cd '~' >> ~/.bash_history
 
 script:
-  - python --version
   - python command_line_lint.py
+  - pylint command_line_lint.py
+  - flake8 command_line_lint.py

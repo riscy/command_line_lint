@@ -11,14 +11,15 @@ you type should be simple and require minimal typing.  The report will contain:
 - a subset of lints from Shellcheck (if it's installed); many of these are
   useful and can warn against dangerous habits
 """
+from __future__ import print_function
+
 import re
 import os
 import stat
 import sys
 import difflib
-from subprocess import check_output, CalledProcessError
-import distutils.spawn
 from collections import Counter
+from subprocess import check_output, CalledProcessError
 
 # parametrize the length and format of the report
 NUM_COMMANDS = 5
@@ -316,7 +317,11 @@ def _shell():
 
 
 def _is_shellcheck_installed():
-    return distutils.spawn.find_executable('shellcheck')
+    try:
+        check_output(['shellcheck', '-V'])
+        return True
+    except CalledProcessError:
+        return False
 
 
 def _is_in_histignore(cmd):
