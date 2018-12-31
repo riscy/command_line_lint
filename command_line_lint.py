@@ -246,7 +246,7 @@ def _lint_bash_histfilesize():
     if filesize_val < 5000:
         _tip('Increase/set HISTFILESIZE to retain more history', indent)
     if filesize_val < int(os.environ.get('HISTSIZE', '0')):
-        _tip('HISTFILESIZE should be larger than HISTSIZE', indent)
+        _tip('Set HISTFILESIZE >= HISTSIZE', indent)
 
 
 def _lint_zsh_histappend():
@@ -265,7 +265,7 @@ def _lint_zsh_savehist():
     if filesize_val < 5000:
         _tip('Increase/set SAVEHIST to retain more history', indent)
     if filesize_val < int(os.environ.get('HISTSIZE', '0')):
-        _tip('SAVEHIST should be larger than HISTSIZE', indent)
+        _tip('Set SAVEHIST >= HISTSIZE', indent)
 
 
 def _lint_zsh_dupes():
