@@ -34,7 +34,8 @@ COLOR_WARN = '' if NO_COLOR else '\033[31m'
 COLOR_INFO = '' if NO_COLOR else '\033[32m'
 COLOR_TIP = '' if NO_COLOR else '\033[33m'
 
-# shellcheck errors and warnings that are not relevant
+# shellcheck errors and warnings that are not relevant;
+# see e.g. https://github.com/koalaman/shellcheck/wiki/SC1089
 SC_IGNORE = [1089, 1090, 1091, 2086, 2103, 2148, 2154, 2164, 2224, 2230]
 
 
