@@ -1,5 +1,10 @@
 """Command-Line Lint --- lint your command-line history.
-Copyright (c) 2018, 2019 Chris Rayner (dchrisrayner@gmail.com).
+
+Author: Chris Rayner (dchrisrayner@gmail.com)
+Created: December 28 2018
+URL: https://github.com/riscy/command_line_lint
+Version: 0.0.0
+
 This software is licensed under the permissive MIT License.
 
 This script generates a simple report against your command-line history and
