@@ -28,7 +28,7 @@ from subprocess import check_output, CalledProcessError
 
 # parametrize the length and format of the report
 NUM_COMMANDS = 5
-NUM_WITH_ARGUMENTS = 10
+NUM_WITH_ARGUMENTS = 5
 NUM_SHELLCHECK = 10
 ENV_WIDTH = 20
 
@@ -79,15 +79,15 @@ def report_overview(commands):
         _lint_zsh_histappend()
 
 
-def report_favorites(commands, top_n=NUM_COMMANDS):
+def report_top_commands(commands, top_n=NUM_COMMANDS):
     """Report user's {top_n} favorite commands."""
-    _print_header("Favorite {}".format(top_n))
+    _print_header("Top {}".format(top_n))
     prefix_count = Counter(cmd.split()[0] for cmd in commands if ' ' in cmd)
     for prefix, count in prefix_count.most_common(top_n):
         _print_command_stats(prefix, count, len(commands))
 
 
-def report_commands_with_arguments(commands, top_n=NUM_WITH_ARGUMENTS):
+def report_top_commands_with_args(commands, top_n=NUM_WITH_ARGUMENTS):
     """Report user's {top_n} most common commands (with args)."""
     _print_header("Top {} with arguments".format(top_n))
     for cmd, count in Counter(commands).most_common(top_n):
@@ -101,7 +101,7 @@ def report_commands_with_arguments(commands, top_n=NUM_WITH_ARGUMENTS):
 
 
 def report_miscellaneous(commands):
-    """Report for some miscellaneous ways to reduce typing."""
+    """Report for some miscellaneous issues."""
     _print_header('Miscellaneous')
     for lint in [
             _lint_command_rename,
@@ -143,24 +143,25 @@ def report_shellcheck(top_n=NUM_SHELLCHECK):
 
 
 def _info(info, arrow_at=0):
-    arrow = ' ' * arrow_at + '^-- ' if arrow_at else '- '
-    print(COLOR_INFO + arrow + info + COLOR_DEFAULT)
+    print(COLOR_INFO + _arrow(arrow_at) + info + COLOR_DEFAULT)
 
 
 def _tip(tip, arrow_at=0):
-    arrow = ' ' * arrow_at + '^-- ' if arrow_at else '- '
-    print(COLOR_TIP + arrow + tip + COLOR_DEFAULT)
+    print(COLOR_TIP + _arrow(arrow_at) + tip + COLOR_DEFAULT)
 
 
 def _warn(warn, arrow_at=0):
-    arrow = ' ' * arrow_at + '^-- ' if arrow_at else '- '
-    print(COLOR_WARN + arrow + warn + COLOR_DEFAULT)
+    print(COLOR_WARN + _arrow(arrow_at) + warn + COLOR_DEFAULT)
+
+
+def _arrow(arrow_at=0):
+    return ' ' * arrow_at + '^-- '
 
 
 def _print_header(header, newline=True):
     if newline:
         print('')
-    print(COLOR_HEADER + '{} '.format(header).ljust(79) + COLOR_DEFAULT)
+    print(COLOR_HEADER + header.center(79) + COLOR_DEFAULT)
 
 
 def _print_environment_variable(var, using=''):
@@ -363,8 +364,8 @@ def main():
             if cmd.strip() and not cmd.startswith('#')
         ]
     report_overview(commands)
-    report_favorites(commands)
-    report_commands_with_arguments(commands)
+    report_top_commands(commands)
+    report_top_commands_with_args(commands)
     report_miscellaneous(commands)
     report_shellcheck()
 
