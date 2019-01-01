@@ -41,8 +41,18 @@ COLOR_INFO = '' if NO_COLOR else '\033[32m'
 COLOR_TIP = '' if NO_COLOR else '\033[33m'
 
 # shellcheck errors and warnings that are not relevant;
-# see e.g. https://github.com/koalaman/shellcheck/wiki/SC1089
-SC_IGNORE = [1089, 1090, 1091, 2086, 2103, 2148, 2154, 2164, 2224, 2230]
+SC_IGNORE = [
+    1089,  # https://github.com/koalaman/shellcheck/wiki/SC1089
+    1090,  # https://github.com/koalaman/shellcheck/wiki/SC1090
+    1091,  # https://github.com/koalaman/shellcheck/wiki/SC1091
+    1117,  # https://github.com/koalaman/shellcheck/wiki/SC1091
+    2103,  # https://github.com/koalaman/shellcheck/wiki/SC2103
+    2148,  # https://github.com/koalaman/shellcheck/wiki/SC2148
+    2154,  # https://github.com/koalaman/shellcheck/wiki/SC2154
+    2164,  # https://github.com/koalaman/shellcheck/wiki/SC2164
+    2224,  # https://github.com/koalaman/shellcheck/wiki/SC2224
+    2230,  # https://github.com/koalaman/shellcheck/wiki/SC2230
+]
 
 
 def report_overview(commands):
@@ -107,11 +117,12 @@ def report_shellcheck(top_n=NUM_SHELLCHECK):
         print('Shellcheck not installed - see https://www.shellcheck.net')
         return
     try:
-        args = [
+        check_output([
+            'shellcheck',
             "--exclude={}".format(','.join(str(cc) for cc in SC_IGNORE)),
             "--shell={}".format(_shell()),
-        ]
-        check_output(['shellcheck', args[0], args[1], _history_file()])
+            _history_file(),
+        ])
         print('Nothing to report.')
         return
     except CalledProcessError as err:
