@@ -180,9 +180,8 @@ def _print_command_stats(cmd, count, total):
 
 
 def lint_command_alias(cmd, count, total):
-    if (cmd in str(check_output([_shell(), '-i', '-c', 'alias'])) or count < 2
-            or total / count > 20 or ' ' not in cmd):
     """Advise an alias -- if a command is frequently used."""
+    if count < 2 or total / count > 20 or ' ' not in cmd:
         return False
     suggestion = ''.join(
         word[0] for word in cmd.split() if re.match(r'\w', word))
