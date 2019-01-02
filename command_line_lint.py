@@ -191,7 +191,7 @@ def _lint_command_alias(cmd, count, total):
 def _lint_command_cd_home(cmd):
     if _standardize(cmd) in {'cd ~', 'cd ~/', 'cd $HOME'}:
         print(cmd)
-        _tip('Useless argument. Just use "cd"', arrow_at=3)
+        _tip('"cd" is sufficient to move to your home directory', arrow_at=3)
         return True
     return False
 
