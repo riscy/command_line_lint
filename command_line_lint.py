@@ -184,7 +184,7 @@ def _lint_command_alias(cmd, count, total):
         return False
     suggestion = ''.join(
         word[0] for word in cmd.split() if re.match(r'\w', word))
-    _tip('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
+    _tip('Consider an alias: alias {}="{}"'.format(suggestion, cmd))
     return True
 
 
