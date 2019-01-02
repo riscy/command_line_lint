@@ -106,6 +106,7 @@ def report_miscellaneous(commands):
     for lint in [
             _lint_command_rename,
             _lint_command_cd_home,
+            _lint_command_clear,
     ]:
         any(lint(cmd) for cmd in set(commands))
 
@@ -192,6 +193,14 @@ def _lint_command_cd_home(cmd):
     if _standardize(cmd) in {'cd ~', 'cd ~/', 'cd $HOME'}:
         print(cmd)
         _tip('"cd" is sufficient to move to your home directory', arrow_at=3)
+        return True
+    return False
+
+
+def _lint_command_clear(cmd):
+    if _standardize(cmd) in {'clear'}:
+        print(cmd)
+        _info('A common keyboard shortcut for "clear" is Ctrl-L')
         return True
     return False
 
