@@ -308,7 +308,7 @@ def _lint_histfile():
     st_mode = os.stat(history_file).st_mode
     if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
         _warn(
-            'Other users can read this file! '
+            'Other users can read your history file! '
             'Run "chmod 600 {}"'.format(history_file),
             ENV_WIDTH + 3,
         )
