@@ -69,7 +69,7 @@ def report_overview(commands):
         lint_bash_histfilesize()
         _print_environment_variable('HISTIGNORE')
         _print_environment_variable('HISTCONTROL')
-        lint_bash_histcontrol()
+        lint_bash_dupes()
         lint_bash_histappend()
     elif _shell() == 'zsh':
         _print_environment_variable('SAVEHIST')
@@ -262,7 +262,7 @@ def lint_bash_histappend():
         _tip('Run "shopt -s histappend" to retain more history')
 
 
-def lint_bash_histcontrol():
+def lint_bash_dupes():
     """Inform user about duplicates being removed."""
     if _shell() not in {'bash', 'sh'}:
         return
