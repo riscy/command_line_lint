@@ -60,23 +60,23 @@ def report_overview(commands):
     _print_header("Overview", newline=False)
     _print_environment_variable('SHELL')
     _print_environment_variable('HISTFILE', using=_history_file())
-    _lint_lengths_of_commands(commands)
-    _lint_histfile()
+    lint_lengths_of_commands(commands)
+    lint_histfile()
     _print_environment_variable('HISTSIZE')
-    _lint_histsize()
+    lint_histsize()
     if _shell() in {'bash', 'sh'}:
         _print_environment_variable('HISTFILESIZE')
-        _lint_bash_histfilesize()
+        lint_bash_histfilesize()
         _print_environment_variable('HISTIGNORE')
         _print_environment_variable('HISTCONTROL')
-        _lint_bash_histcontrol()
-        _lint_bash_histappend()
+        lint_bash_histcontrol()
+        lint_bash_histappend()
     elif _shell() == 'zsh':
         _print_environment_variable('SAVEHIST')
-        _lint_zsh_savehist()
+        lint_zsh_savehist()
         _print_environment_variable('HISTORY_IGNORE')
-        _lint_zsh_dupes()
-        _lint_zsh_histappend()
+        lint_zsh_dupes()
+        lint_zsh_histappend()
 
 
 def report_top_commands(commands, top_n=NUM_COMMANDS):
@@ -95,8 +95,8 @@ def report_top_commands_with_args(commands, top_n=NUM_WITH_ARGUMENTS):
         if not _is_in_histignore(cmd):
             sum(
                 lint(cmd, count, len(commands)) for lint in [
-                    _lint_command_alias,
-                    _lint_command_ignore,
+                    lint_command_alias,
+                    lint_command_ignore,
                 ])
 
 
@@ -104,9 +104,9 @@ def report_miscellaneous(commands):
     """Report for some miscellaneous issues."""
     _print_header('Miscellaneous')
     for lint in [
-            _lint_command_repeat_arguments,
-            _lint_command_cd_home,
-            _lint_command_clear,
+            lint_command_repeat_arguments,
+            lint_command_cd_home,
+            lint_command_clear,
     ]:
         any(lint(cmd) for cmd in set(commands))
 
@@ -179,9 +179,10 @@ def _print_command_stats(cmd, count, total):
     print("{}{}{}".format(cmd, percent, times))
 
 
-def _lint_command_alias(cmd, count, total):
+def lint_command_alias(cmd, count, total):
     if (cmd in str(check_output([_shell(), '-i', '-c', 'alias'])) or count < 2
             or total / count > 20 or ' ' not in cmd):
+    """Advise an alias -- if a command is frequently used."""
         return False
     suggestion = ''.join(
         word[0] for word in cmd.split() if re.match(r'\w', word))
@@ -189,7 +190,8 @@ def _lint_command_alias(cmd, count, total):
     return True
 
 
-def _lint_command_cd_home(cmd):
+def lint_command_cd_home(cmd):
+    """Advise dropping superfluous arguments to cd."""
     if _standardize(cmd) in {'cd ~', 'cd ~/', 'cd $HOME'}:
         print(cmd)
         _tip('"cd" is sufficient to move to your home directory', arrow_at=3)
@@ -197,7 +199,8 @@ def _lint_command_cd_home(cmd):
     return False
 
 
-def _lint_command_clear(cmd):
+def lint_command_clear(cmd):
+    """Advise using keyboard shortcuts when available."""
     if _standardize(cmd) in {'clear'}:
         print(cmd)
         _info('A common keyboard shortcut for "clear" is Ctrl-L')
@@ -205,7 +208,8 @@ def _lint_command_clear(cmd):
     return False
 
 
-def _lint_command_ignore(cmd, count, total):
+def lint_command_ignore(cmd, count, total):
+    """Advise ignoring frequent, short commands."""
     if len(cmd) >= 4 or count < 2 or total / count > 20:
         return False
     if _shell() in {'bash', 'sh'}:
@@ -217,7 +221,8 @@ def _lint_command_ignore(cmd, count, total):
     return False
 
 
-def _lint_command_repeat_arguments(cmd):
+def lint_command_repeat_arguments(cmd):
+    """Advise reusing parts of the argument list, when possible."""
     tokens = cmd.split()
     if len(tokens) != 3:
         return False
@@ -239,7 +244,8 @@ def _lint_command_repeat_arguments(cmd):
     return False
 
 
-def _lint_lengths_of_commands(commands):
+def lint_lengths_of_commands(commands):
+    """Inform user of mean length of commands, number of arguments."""
     output = "History commands average {} characters with ".format(
         int(sum(len(cmd) for cmd in commands) / len(commands)))
     args = int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))
@@ -247,7 +253,8 @@ def _lint_lengths_of_commands(commands):
     _info(output, ENV_WIDTH + 3)
 
 
-def _lint_bash_histappend():
+def lint_bash_histappend():
+    """Inform user of bash's histappend option."""
     if _shell() not in {'bash', 'sh'}:
         return
     histappend = check_output([_shell(), '-i', '-c', 'shopt']).decode('utf-8')
@@ -255,7 +262,8 @@ def _lint_bash_histappend():
         _tip('Run "shopt -s histappend" to retain more history')
 
 
-def _lint_bash_histcontrol():
+def lint_bash_histcontrol():
+    """Inform user about duplicates being removed."""
     if _shell() not in {'bash', 'sh'}:
         return
     histcontrol = os.environ.get('HISTCONTROL', '')
@@ -265,7 +273,8 @@ def _lint_bash_histcontrol():
             arrow_at=ENV_WIDTH + 3)
 
 
-def _lint_bash_histfilesize():
+def lint_bash_histfilesize():
+    """Advise user to try to keep more history!"""
     if _shell() not in {'bash', 'sh'}:
         return
     indent = ENV_WIDTH + 3
@@ -276,7 +285,8 @@ def _lint_bash_histfilesize():
         _tip('Set HISTFILESIZE >= HISTSIZE', indent)
 
 
-def _lint_zsh_histappend():
+def lint_zsh_histappend():
+    """Inform user of zsh's appendhistory option."""
     if _shell() != 'zsh':
         return
     setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
@@ -284,7 +294,8 @@ def _lint_zsh_histappend():
         _tip('Run "setopt appendhistory" to retain more history')
 
 
-def _lint_zsh_savehist():
+def lint_zsh_savehist():
+    """Advise user to try to keep more history!"""
     if _shell() != 'zsh':
         return
     indent = ENV_WIDTH + 3
@@ -295,7 +306,8 @@ def _lint_zsh_savehist():
         _tip('Set SAVEHIST >= HISTSIZE', indent)
 
 
-def _lint_zsh_dupes():
+def lint_zsh_dupes():
+    """Inform user about duplicates being removed."""
     if _shell() != 'zsh':
         return
     setopt = str(check_output([_shell(), '-i', '-c', 'setopt']))
@@ -303,7 +315,8 @@ def _lint_zsh_dupes():
         _tip('Run "unsetopt histignorerealdups" to retain more history')
 
 
-def _lint_histfile():
+def lint_histfile():
+    """Advise user to fix permissions on history file."""
     history_file = _history_file()
     st_mode = os.stat(history_file).st_mode
     if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
@@ -314,7 +327,8 @@ def _lint_histfile():
         )
 
 
-def _lint_histsize():
+def lint_histsize():
+    """Advise user to try to keep more history!"""
     histsize_val = int(os.environ.get('HISTSIZE', '0'))
     if histsize_val < 5000:
         _tip('Increase/set HISTSIZE to retain history', ENV_WIDTH + 3)
