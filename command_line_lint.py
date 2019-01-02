@@ -104,7 +104,7 @@ def report_miscellaneous(commands):
     """Report for some miscellaneous issues."""
     _print_header('Miscellaneous')
     for lint in [
-            _lint_command_rename,
+            _lint_command_repeat_arguments,
             _lint_command_cd_home,
             _lint_command_clear,
     ]:
@@ -217,23 +217,23 @@ def _lint_command_ignore(cmd, count, total):
     return False
 
 
-def _lint_command_rename(cmd):
-    short_enough = 0.80
+def _lint_command_repeat_arguments(cmd):
     tokens = cmd.split()
-    if len(tokens) != 3 or tokens[0] not in {'mv', 'cp'}:
+    if len(tokens) != 3:
         return False
     prefix, arg1, arg2 = tokens
     match = difflib.SequenceMatcher(a=arg1, b=arg2)\
                    .find_longest_match(0, len(arg1), 0, len(arg2))
     if match.a == 0 and match.b == 0:
-        new_cmd = "{}{{{},{}}}".format(
+        new_args = "{}{{{},{}}}".format(
             arg1[match.a:match.a + match.size],
             arg1[match.a + match.size:],
             arg2[match.b + match.size:],
         )
-        if float(len(new_cmd)) / len(cmd) <= short_enough:
+        new_cmd = "{} {}".format(prefix, new_args)
+        if float(len(new_cmd)) / len(cmd) <= 0.75:
             print(' '.join(tokens))
-            _info('It can be shorter to write "{} {}"'.format(prefix, new_cmd),
+            _info('It is shorter to write: "{}"'.format(new_args),
                   len(prefix) + 1)
             return True
     return False
