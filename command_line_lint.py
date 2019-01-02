@@ -240,7 +240,7 @@ def _lint_command_repeat_arguments(cmd):
 
 
 def _lint_lengths_of_commands(commands):
-    output = "Commands average {} characters with ".format(
+    output = "History commands average {} characters with ".format(
         int(sum(len(cmd) for cmd in commands) / len(commands)))
     args = int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))
     output += '1 argument' if args == 1 else "{} arguments".format(args)
