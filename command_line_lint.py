@@ -23,14 +23,10 @@ import os
 import stat
 import sys
 import difflib
-from collections import Counter
+from collections import Counter, defaultdict
 from subprocess import check_output, CalledProcessError
 
 # parametrize the length and format of the report
-NUM_COMMANDS = 5
-NUM_WITH_ARGUMENTS = 5
-NUM_SHELLCHECK = 10
-ENV_WIDTH = 20
 
 # define the colors of the report (or none), per https://no-color.org
 NO_COLOR = os.environ.get('NO_COLOR')
@@ -55,31 +51,24 @@ SC_IGNORE = [
 ]
 
 
-def report_overview(commands):
+def report_overview():
     """Report on some common environment settings, etc."""
     _print_header("Overview", newline=False)
-    _print_environment_variable('SHELL')
-    _print_environment_variable('HISTFILE', using=_history_file())
-    lint_lengths_of_commands(commands)
-    lint_histfile()
-    _print_environment_variable('HISTSIZE')
-    lint_histsize()
+    _print_history_file()
+
     if _shell() in {'bash', 'sh'}:
+        _print_environment_variable('HISTSIZE')
         _print_environment_variable('HISTFILESIZE')
-        lint_bash_histfilesize()
-        _print_environment_variable('HISTIGNORE')
         _print_environment_variable('HISTCONTROL')
-        lint_bash_dupes()
-        lint_bash_histappend()
+        _print_environment_variable('HISTIGNORE')
     elif _shell() == 'zsh':
+        _print_environment_variable('HISTSIZE')
         _print_environment_variable('SAVEHIST')
-        lint_zsh_savehist()
         _print_environment_variable('HISTORY_IGNORE')
-        lint_zsh_dupes()
-        lint_zsh_histappend()
+    _print_environment_variable('SHELL')
 
 
-def report_top_commands(commands, top_n=NUM_COMMANDS):
+def report_top_commands(commands, top_n=3):
     """Report user's {top_n} favorite commands."""
     _print_header("Top {}".format(top_n))
     prefix_count = Counter(cmd.split()[0] for cmd in commands if ' ' in cmd)
@@ -87,41 +76,40 @@ def report_top_commands(commands, top_n=NUM_COMMANDS):
         _print_command_stats(prefix, count, len(commands))
 
 
-def report_top_commands_with_args(commands, top_n=NUM_WITH_ARGUMENTS):
+def report_top_commands_with_args(commands, top_n=10):
     """Report user's {top_n} most common commands (with args)."""
     _print_header("Top {} with arguments".format(top_n))
     for cmd, count in Counter(commands).most_common(top_n):
         _print_command_stats(cmd, count, len(commands))
-        if not _is_in_histignore(cmd):
-            sum(
-                lint(cmd, count, len(commands)) for lint in [
-                    lint_command_alias,
-                    lint_command_ignore,
-                ])
+        if not _is_ignored(cmd):
+            for lint in LintCommand.favorite_lints:
+                lint(cmd, count, len(commands))
 
 
 def report_miscellaneous(commands):
     """Report for some miscellaneous issues."""
     _print_header('Miscellaneous')
-    for lint in [
-            lint_command_repeat_arguments,
-            lint_command_cd_home,
-            lint_command_clear,
-    ]:
-        any(lint(cmd) for cmd in set(commands))
+    for num, lints in LintCommand.lints.items():
+        for lint in lints:
+            any(lint(commands[ii:ii + num]) for ii in range(len(commands)))
 
 
-def report_shellcheck(top_n=NUM_SHELLCHECK):
+def report_shellcheck(top_n=10):
     """Report containing lints from 'Shellcheck'."""
     _print_header('Shellcheck')
+
+    shell = _shell()
     if not _is_shellcheck_installed():
-        print('Shellcheck not installed - see https://www.shellcheck.net')
+        print('Install Shellcheck at https://www.shellcheck.net'.center(79))
         return
+    if shell not in {'bash', 'sh'}:
+        print('<No support for {}; spoofing as bash>'.format(shell).center(79))
+        shell = 'bash'
     try:
         check_output([
             'shellcheck',
             "--exclude={}".format(','.join(str(cc) for cc in SC_IGNORE)),
-            "--shell={}".format(_shell()),
+            "--shell={}".format(shell),
             _history_file(),
         ])
         print('Nothing to report.')
@@ -143,6 +131,212 @@ def report_shellcheck(top_n=NUM_SHELLCHECK):
                 ))
 
 
+class LintVariable(object):  # pylint: disable=R0205,R0903
+    """Register functions that lint a command or command sequence."""
+    lints = defaultdict(list)
+
+    def __init__(
+            self,
+            variable,
+    ):
+        self.variable = variable
+
+    def __call__(self, lint):
+        self.lints[self.variable].append(lint)
+
+
+class LintCommand(object):  # pylint: disable=R0205,R0903
+    """Register functions that lint a command or command sequence."""
+    lints = defaultdict(list)
+    favorite_lints = []
+
+    def __init__(
+            self,
+            num_commands_in_sequence=1,
+            only_if_frequently_used=False,
+    ):
+        self.num_commands_in_sequence = num_commands_in_sequence
+        self.only_if_frequently_used = only_if_frequently_used
+
+    def __call__(self, lint):
+        if self.only_if_frequently_used:
+            self._add_lint_for_frequent_command(lint)
+        else:
+            self._add_lint(lint)
+
+    def _add_lint(self, lint):
+        def lint_single(commands):
+            """Convenience function to unwrap a list with one element."""
+            return lint(commands[0])
+
+        if self.num_commands_in_sequence == 1:
+            self.lints[self.num_commands_in_sequence].append(lint_single)
+        else:
+            self.lints[self.num_commands_in_sequence].append(lint)
+
+    def _add_lint_for_frequent_command(self, lint):
+        def lint_if_frequently_used(command, count, total):
+            if count >= 2 and total / count <= 20:
+                lint(command)
+
+        self.favorite_lints.append(lint_if_frequently_used)
+
+
+@LintCommand()
+def cd_to_home_directory(cmd):
+    """Advise dropping superfluous arguments to cd."""
+    if cmd in {'cd ~', 'cd ~/', 'cd $HOME'}:
+        print(cmd)
+        _tip('"cd" is sufficient to move to your home directory', arrow_at=3)
+        return True
+    return False
+
+
+@LintCommand()
+def clear_has_keyboard_shortcut(cmd):
+    """Advise using keyboard shortcuts when available."""
+    if cmd in {'clear'}:
+        print(cmd)
+        _info('A common keyboard shortcut for "clear" is Ctrl-L')
+        return True
+    return False
+
+
+@LintCommand()
+def dont_pipe_wget_into_shell(cmd):
+    """Advise user to avoid dangerous 'wget | sh'-style pipes."""
+    if re.search(r'wget [^|]+\|\s(sh|bash)', cmd):
+        print(cmd)
+        _warn("Avoid piping wget into a shell", cmd.find('|'))
+        return True
+    return False
+
+
+@LintCommand()
+def reuse_similar_arguments(cmd):
+    """Reuse parts of the argument list, when possible."""
+    tokens = cmd.split()
+    if len(tokens) != 3:
+        return False
+    prefix, arg1, arg2 = tokens
+    match = difflib.SequenceMatcher(a=arg1, b=arg2)\
+                   .find_longest_match(0, len(arg1), 0, len(arg2))
+    if match.a == 0 and match.b == 0:
+        shorter_args = "{}{{{},{}}}".format(
+            arg1[match.a:match.a + match.size],
+            arg1[match.a + match.size:],
+            arg2[match.b + match.size:],
+        )
+        if float(len(prefix) + len(shorter_args) + 1) / len(cmd) <= 0.80:
+            print(cmd)
+            _tip(
+                'Arguments have common substrings; try: "{} {}"'.format(
+                    prefix, shorter_args),
+                len(prefix) + 1)
+            return True
+    return False
+
+
+@LintCommand(num_commands_in_sequence=3)
+def dont_mkdir_cd_mkdir(commands):
+    """Suggest use of mkdir -p when appropriate."""
+    tokens = [command.split() for command in commands]
+    if (tokens[0][0] == 'mkdir' and tokens[1][0] == 'cd'
+            and tokens[2][0] == 'mkdir' and tokens[0][1] == tokens[1][1]):
+        print('; '.join(commands))
+        _tip('Create nested directories with "mkdir -p {}/{}"'.format(
+            tokens[0][1], tokens[2][1]))
+        return True
+    return False
+
+
+@LintCommand(only_if_frequently_used=True)
+def consider_an_alias(cmd):
+    """Suggest an alias."""
+    if len(cmd) <= 4:
+        return
+    suggestion = ''.join(
+        word[0] for word in cmd.split() if re.match(r'\w', word))
+    _tip('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
+
+
+@LintCommand(only_if_frequently_used=True)
+def ignore_short_commands(cmd):
+    """Advise ignoring frequent, short commands."""
+    if len(cmd) > 4:
+        return
+    if _shell() in {'bash', 'sh'}:
+        _tip('Add frequently used but short commands to HISTIGNORE')
+    elif _shell() == 'zsh':
+        _tip('Add frequently used but short commands to HISTORY_IGNORE')
+
+
+@LintVariable('HISTSIZE')
+def lint_histsize():
+    """Advise user to try to keep more history!"""
+    histsize_val = int(os.environ.get('HISTSIZE', '0'))
+    if histsize_val < 5000:
+        _tip('Increase/set HISTSIZE to retain history')
+
+
+@LintVariable('HISTFILESIZE')
+def lint_bash_histfilesize():
+    """Advise user to try to keep more history!"""
+    filesize_val = int(os.environ.get('HISTFILESIZE', '0'))
+    if filesize_val < 5000:
+        _tip('Increase/set HISTFILESIZE to retain more history')
+    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
+        _tip('Set HISTFILESIZE >= HISTSIZE')
+
+
+@LintVariable('HISTCONTROL')
+def lint_bash_save_dups():
+    """Inform user about duplicates being removed."""
+    histcontrol = os.environ.get('HISTCONTROL', '')
+    if 'ignoredups' in histcontrol or 'erasedups' in histcontrol:
+        _tip('Remove "ignoredups" and "erasedups" to retain more history')
+
+
+@LintVariable('SAVEHIST')
+def lint_zsh_savehist():
+    """Advise user to try to keep more history!"""
+    filesize_val = int(os.environ.get('SAVEHIST', '0'))
+    if filesize_val < 5000:
+        _tip('Increase/set SAVEHIST to retain more history')
+    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
+        _tip('Set SAVEHIST >= HISTSIZE')
+
+
+@LintVariable('SHELL')
+def lint_bash_histappend():
+    """Inform user of bash's histappend option."""
+    if _shell() not in {'bash', 'sh'}:
+        return
+    histappend = check_output([_shell(), '-i', '-c', 'shopt']).decode('utf-8')
+    if re.search(r'histappend[ \t]+off', histappend):
+        _tip('Run "shopt -s histappend" to retain more history')
+
+
+@LintVariable('SHELL')
+def lint_zsh_appendhistory():
+    """Inform user of zsh's appendhistory option."""
+    if _shell() != 'zsh':
+        return
+    setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
+    if 'noappendhistory' in setopt:
+        _tip('Run "setopt appendhistory" to retain more history')
+
+
+@LintVariable('SHELL')
+def lint_zsh_save_dups():
+    """Inform user about duplicates being removed."""
+    if _shell() != 'zsh':
+        return
+    setopt = str(check_output([_shell(), '-i', '-c', 'setopt']))
+    if 'histsavenodups' in setopt:
+        _tip('Run "unsetopt HIST_SAVE_NO_DUPS" to retain more history')
+
+
 def _info(info, arrow_at=0):
     print(COLOR_INFO + _arrow(arrow_at) + info + COLOR_DEFAULT)
 
@@ -156,20 +350,22 @@ def _warn(warn, arrow_at=0):
 
 
 def _arrow(arrow_at=0):
-    return ' ' * arrow_at + '^-- '
+    return ' ' * arrow_at + '^-- ' if arrow_at else '  * '
 
 
 def _print_header(header, newline=True):
     if newline:
         print('')
-    print(COLOR_HEADER + header.center(79) + COLOR_DEFAULT)
+    print(COLOR_HEADER + header.upper().center(79) + COLOR_DEFAULT)
 
 
 def _print_environment_variable(var, using=''):
     value = '"' + os.environ.get(var) + '"' if var in os.environ else 'UNSET'
     if using:
-        value += ' -- using "{}"'.format(using)
-    print("{}=> {}".format(var.ljust(ENV_WIDTH), value))
+        value += ' (using "{}")'.format(using)
+    print("{}=> {}".format(var.ljust(20), value))
+    for lint in LintVariable.lints[var]:
+        lint()
 
 
 def _print_command_stats(cmd, count, total):
@@ -179,158 +375,24 @@ def _print_command_stats(cmd, count, total):
     print("{}{}{}".format(cmd, percent, times))
 
 
-def lint_command_alias(cmd, count, total):
-    """Advise an alias -- if a command is frequently used."""
-    if count < 2 or total / count > 20 or ' ' not in cmd:
-        return False
-    suggestion = ''.join(
-        word[0] for word in cmd.split() if re.match(r'\w', word))
-    _tip('Consider an alias: alias {}="{}"'.format(suggestion, cmd))
-    return True
+def _print_history_file():
+    print('Using history from "{}":'.format(_history_file()))
 
-
-def lint_command_cd_home(cmd):
-    """Advise dropping superfluous arguments to cd."""
-    if _standardize(cmd) in {'cd ~', 'cd ~/', 'cd $HOME'}:
-        print(cmd)
-        _tip('"cd" is sufficient to move to your home directory', arrow_at=3)
-        return True
-    return False
-
-
-def lint_command_clear(cmd):
-    """Advise using keyboard shortcuts when available."""
-    if _standardize(cmd) in {'clear'}:
-        print(cmd)
-        _info('A common keyboard shortcut for "clear" is Ctrl-L')
-        return True
-    return False
-
-
-def lint_command_ignore(cmd, count, total):
-    """Advise ignoring frequent, short commands."""
-    if len(cmd) >= 4 or count < 2 or total / count > 20:
-        return False
-    if _shell() in {'bash', 'sh'}:
-        _tip('Consider adding frequent but short commands to HISTIGNORE')
-        return True
-    if _shell() == 'zsh':
-        _tip('Consider adding frequent but short commands to HISTORY_IGNORE')
-        return True
-    return False
-
-
-def lint_command_repeat_arguments(cmd):
-    """Advise reusing parts of the argument list, when possible."""
-    tokens = cmd.split()
-    if len(tokens) != 3:
-        return False
-    prefix, arg1, arg2 = tokens
-    match = difflib.SequenceMatcher(a=arg1, b=arg2)\
-                   .find_longest_match(0, len(arg1), 0, len(arg2))
-    if match.a == 0 and match.b == 0:
-        new_args = "{}{{{},{}}}".format(
-            arg1[match.a:match.a + match.size],
-            arg1[match.a + match.size:],
-            arg2[match.b + match.size:],
-        )
-        new_cmd = "{} {}".format(prefix, new_args)
-        if float(len(new_cmd)) / len(cmd) <= 0.75:
-            print(' '.join(tokens))
-            _info('It is shorter to write: "{}"'.format(new_args),
-                  len(prefix) + 1)
-            return True
-    return False
-
-
-def lint_lengths_of_commands(commands):
-    """Inform user of mean length of commands, number of arguments."""
-    output = "History commands average {} characters with ".format(
+    # Inform user of mean length of commands, number of arguments.
+    commands = _commands()
+    output = "Commands average {} characters with ".format(
         int(sum(len(cmd) for cmd in commands) / len(commands)))
     args = int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))
     output += '1 argument' if args == 1 else "{} arguments".format(args)
-    _info(output, ENV_WIDTH + 3)
+    _info(output)
 
-
-def lint_bash_histappend():
-    """Inform user of bash's histappend option."""
-    if _shell() not in {'bash', 'sh'}:
-        return
-    histappend = check_output([_shell(), '-i', '-c', 'shopt']).decode('utf-8')
-    if re.search(r'histappend[ \t]+off', histappend):
-        _tip('Run "shopt -s histappend" to retain more history')
-
-
-def lint_bash_dupes():
-    """Inform user about duplicates being removed."""
-    if _shell() not in {'bash', 'sh'}:
-        return
-    histcontrol = os.environ.get('HISTCONTROL', '')
-    if 'ignoredups' in histcontrol or 'erasedups' in histcontrol:
-        _tip(
-            'Remove "ignoredups" and "erasedups" to retain more history',
-            arrow_at=ENV_WIDTH + 3)
-
-
-def lint_bash_histfilesize():
-    """Advise user to try to keep more history!"""
-    if _shell() not in {'bash', 'sh'}:
-        return
-    indent = ENV_WIDTH + 3
-    filesize_val = int(os.environ.get('HISTFILESIZE', '0'))
-    if filesize_val < 5000:
-        _tip('Increase/set HISTFILESIZE to retain more history', indent)
-    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
-        _tip('Set HISTFILESIZE >= HISTSIZE', indent)
-
-
-def lint_zsh_histappend():
-    """Inform user of zsh's appendhistory option."""
-    if _shell() != 'zsh':
-        return
-    setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
-    if 'noappendhistory' in setopt:
-        _tip('Run "setopt appendhistory" to retain more history')
-
-
-def lint_zsh_savehist():
-    """Advise user to try to keep more history!"""
-    if _shell() != 'zsh':
-        return
-    indent = ENV_WIDTH + 3
-    filesize_val = int(os.environ.get('SAVEHIST', '0'))
-    if filesize_val < 5000:
-        _tip('Increase/set SAVEHIST to retain more history', indent)
-    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
-        _tip('Set SAVEHIST >= HISTSIZE', indent)
-
-
-def lint_zsh_dupes():
-    """Inform user about duplicates being removed."""
-    if _shell() != 'zsh':
-        return
-    setopt = str(check_output([_shell(), '-i', '-c', 'setopt']))
-    if 'histignorealldups' not in setopt:
-        _tip('Run "unsetopt histignorerealdups" to retain more history')
-
-
-def lint_histfile():
-    """Advise user to fix permissions on history file."""
+    # Advise user to fix permissions on history file.
     history_file = _history_file()
     st_mode = os.stat(history_file).st_mode
     if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
         _warn(
-            'Other users can read your history file! '
-            'Run "chmod 600 {}"'.format(history_file),
-            ENV_WIDTH + 3,
-        )
-
-
-def lint_histsize():
-    """Advise user to try to keep more history!"""
-    histsize_val = int(os.environ.get('HISTSIZE', '0'))
-    if histsize_val < 5000:
-        _tip('Increase/set HISTSIZE to retain history', ENV_WIDTH + 3)
+            'Other users can read this file! '
+            'Run "chmod 600 {}"'.format(history_file), )
 
 
 def _history_file():
@@ -351,6 +413,19 @@ def _history_file():
     return history_file
 
 
+def _commands():
+    with open(_history_file()) as stream:
+        return [
+            _normalize(cmd) for cmd in stream.readlines() if _normalize(cmd)
+        ]
+
+
+def _normalize(cmd):
+    """Squash extra whitespace; drop command if it was a comment."""
+    cmd = ' '.join(cmd.split())
+    return '' if cmd.startswith('#') else cmd
+
+
 def _shell():
     return os.path.basename(os.environ.get('SHELL'))
 
@@ -363,8 +438,12 @@ def _is_shellcheck_installed():
         return False
 
 
-def _is_in_histignore(cmd):
-    return _standardize(cmd) in os.environ.get('HISTIGNORE', '').split(':')
+def _is_ignored(cmd):
+    if _shell() == 'zsh':
+        return cmd in re.split(r'[()|]', os.environ.get('HISTORY_IGNORE', ''))
+    if _shell() in {'bash', 'sh'}:
+        return cmd in os.environ.get('HISTIGNORE', '').split(':')
+    return False
 
 
 def _remove_prefix(text, regexp):
@@ -374,18 +453,10 @@ def _remove_prefix(text, regexp):
     return text[len(match.group(0)):]
 
 
-def _standardize(cmd):
-    return ' '.join(cmd.split())
-
-
 def main():
     """Run all reports."""
-    with open(_history_file()) as stream:
-        commands = [
-            cmd.strip() for cmd in stream.readlines()
-            if cmd.strip() and not cmd.startswith('#')
-        ]
-    report_overview(commands)
+    commands = _commands()
+    report_overview()
     report_top_commands(commands)
     report_top_commands_with_args(commands)
     report_miscellaneous(commands)

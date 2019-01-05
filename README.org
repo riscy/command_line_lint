@@ -34,7 +34,7 @@
   - =zsh= uses the value of =HISTFILE=
   Not all shells have support for saving a history file (fish, dash, etc.)
 * Configure
-  =command_line_lint= gives better results when the following hold
+  /Command-Line Lint/ gives better results when the following hold
   (it will tell you about these, too):
   - The =HISTSIZE= environment variable should be large enough to produce useful
     usage summaries.  The defaults tend to be too small -- try 5000.
@@ -61,4 +61,4 @@
     dry-running a command like ~rm -rf ./*~ with ~ls ./*~ is a good idea;
     switching back and forth between directories can use ~cd -~ and switching
     back and forth between git branches can use ~git checkout -~; etc.)
-  - Avoid piping =wget= into =sh=
+
