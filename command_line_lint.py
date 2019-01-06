@@ -131,8 +131,10 @@ def report_shellcheck(top_n=10):
                 ))
 
 
-class LintVariable(object):  # pylint: disable=R0205,R0903
+class LintVariable():
     """Register functions that lint a command or command sequence."""
+    # pylint: disable=bad-option-value,old-style-class
+    # pylint: disable=too-few-public-methods
     lints = defaultdict(list)
 
     def __init__(
@@ -145,8 +147,10 @@ class LintVariable(object):  # pylint: disable=R0205,R0903
         self.lints[self.variable].append(lint)
 
 
-class LintCommand(object):  # pylint: disable=R0205,R0903
+class LintCommand():
     """Register functions that lint a command or command sequence."""
+    # pylint: disable=bad-option-value,old-style-class
+    # pylint: disable=too-few-public-methods
     lints = defaultdict(list)
     favorite_lints = []
 
@@ -176,6 +180,7 @@ class LintCommand(object):  # pylint: disable=R0205,R0903
 
     def _add_lint_for_frequent_command(self, lint):
         def lint_if_frequently_used(command, count, total):
+            """Only run lint if command is frequently used."""
             if count >= 2 and total / count <= 20:
                 lint(command)
 
