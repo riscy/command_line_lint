@@ -55,17 +55,19 @@ def report_overview():
     """Report on some common environment settings, etc."""
     _print_header("Overview", newline=False)
     _print_history_file()
+    _print_environment_variable('SHELL')
 
     if _shell() in {'bash', 'sh'}:
+        lint_bash_options()
         _print_environment_variable('HISTSIZE')
         _print_environment_variable('HISTFILESIZE')
         _print_environment_variable('HISTCONTROL')
         _print_environment_variable('HISTIGNORE')
     elif _shell() == 'zsh':
+        lint_zsh_options()
         _print_environment_variable('HISTSIZE')
         _print_environment_variable('SAVEHIST')
         _print_environment_variable('HISTORY_IGNORE')
-    _print_environment_variable('SHELL')
 
 
 def report_top_commands(commands, top_n=3):
@@ -312,9 +314,8 @@ def lint_zsh_savehist():
         _tip('Set SAVEHIST >= HISTSIZE')
 
 
-@LintVariable('SHELL')
-def lint_bash_histappend():
-    """Inform user of bash's histappend option."""
+def lint_bash_options():
+    """Lint bash options."""
     if _shell() not in {'bash', 'sh'}:
         return
     histappend = check_output([_shell(), '-i', '-c', 'shopt']).decode('utf-8')
@@ -322,22 +323,16 @@ def lint_bash_histappend():
         _tip('Run "shopt -s histappend" to retain more history')
 
 
-@LintVariable('SHELL')
-def lint_zsh_appendhistory():
-    """Inform user of zsh's appendhistory option."""
+def lint_zsh_options():
+    """Lint zsh options."""
     if _shell() != 'zsh':
         return
     setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
     if 'noappendhistory' in setopt:
         _tip('Run "setopt appendhistory" to retain more history')
-
-
-@LintVariable('SHELL')
-def lint_zsh_save_dups():
-    """Inform user about duplicates being removed."""
     if _shell() != 'zsh':
         return
-    setopt = str(check_output([_shell(), '-i', '-c', 'setopt']))
+    setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
     if 'histsavenodups' in setopt:
         _tip('Run "unsetopt HIST_SAVE_NO_DUPS" to retain more history')
 
