@@ -26,8 +26,6 @@ import difflib
 from collections import Counter, defaultdict
 from subprocess import check_output, CalledProcessError
 
-# parametrize the length and format of the report
-
 # define the colors of the report (or none), per https://no-color.org
 NO_COLOR = os.environ.get('NO_COLOR')
 COLOR_DEFAULT = '' if NO_COLOR else '\033[0m'
@@ -59,9 +57,8 @@ SC_IGNORE = [
 def report_overview():
     """Report on some common environment settings, etc."""
     _print_header("Overview", newline=False)
-    _print_history_file()
+    _print_history_file_stats()
     _print_environment_variable('SHELL')
-
     if _shell() in {'bash', 'sh'}:
         lint_bash_options()
         _print_environment_variable('HISTSIZE')
@@ -93,12 +90,14 @@ def report_top_commands_with_args(commands, top_n=10):
                 lint(cmd, count, len(commands))
 
 
-def report_miscellaneous(commands):
-    """Report for some miscellaneous issues."""
-    _print_header('Miscellaneous')
+def report_command_line(commands):
+    """Miscellaneous tips to improve command-line usage."""
+    _print_header('Command-line tips')
     for num, lints in LintCommand.lints.items():
         for lint in lints:
-            any(lint(commands[ii:ii + num]) for ii in range(len(commands)))
+            any(
+                lint(commands[ii:ii + num])
+                for ii in range(len(commands) - num + 1))
 
 
 def report_shellcheck(top_n=10):
@@ -188,7 +187,7 @@ class LintCommand():
     def _add_lint_for_frequent_command(self, lint):
         def lint_if_frequently_used(command, count, total):
             """Only run lint if command is frequently used."""
-            if count >= 2 and total / count <= 20:
+            if count >= 2 and total / count <= 25:
                 lint(command)
 
         self.favorite_lints.append(lint_if_frequently_used)
@@ -217,15 +216,16 @@ def clear_has_keyboard_shortcut(cmd):
 @LintCommand()
 def dont_pipe_wget_into_shell(cmd):
     """Advise user to avoid dangerous 'wget | sh'-style pipes."""
-    if re.search(r'wget [^|]+\|\s(sh|bash)', cmd):
+    if re.search(r'wget [^|]+\|\s*(bash|sh|zsh|tcsh|csh)', cmd):
         print(cmd)
-        _warn("Avoid piping wget into a shell", cmd.find('|'))
+        _warn("Don't pipe wget into a shell; mistakes can be costly",
+              cmd.find('|'))
         return True
     return False
 
 
 @LintCommand()
-def reuse_similar_arguments(cmd):
+def reuse_common_substrings(cmd):
     """Reuse parts of the argument list, when possible."""
     tokens = cmd.split()
     if len(tokens) != 3:
@@ -251,13 +251,13 @@ def reuse_similar_arguments(cmd):
 
 @LintCommand(num_commands_in_sequence=3)
 def dont_mkdir_cd_mkdir(commands):
-    """Suggest use of mkdir -p when appropriate."""
-    tokens = [command.split() for command in commands]
-    if (tokens[0][0] == 'mkdir' and tokens[1][0] == 'cd'
-            and tokens[2][0] == 'mkdir' and tokens[0][1] == tokens[1][1]):
+    """Suggest mkdir -p when appropriate."""
+    first_cmd, second_cmd, third_cmd = [cmd.split() for cmd in commands]
+    if (first_cmd[0] == 'mkdir' and second_cmd[0] == 'cd'
+            and first_cmd[-1] == second_cmd[-1] and third_cmd[0] == 'mkdir'):
         print('; '.join(commands))
         _tip('Create nested directories with "mkdir -p {}/{}"'.format(
-            tokens[0][1], tokens[2][1]))
+            first_cmd[-1], third_cmd[1]))
         return True
     return False
 
@@ -265,7 +265,7 @@ def dont_mkdir_cd_mkdir(commands):
 @LintCommand(only_if_frequently_used=True)
 def consider_an_alias(cmd):
     """Suggest an alias."""
-    if len(cmd) <= 4:
+    if len(cmd) < 5:
         return
     suggestion = ''.join(
         word[0] for word in cmd.split() if re.match(r'\w', word))
@@ -284,7 +284,7 @@ def ignore_short_commands(cmd):
 
 
 @LintVariable('HISTSIZE')
-def lint_histsize():
+def increase_histsize():
     """Advise user to try to keep more history!"""
     histsize_val = int(os.environ.get('HISTSIZE', '0'))
     if histsize_val < 5000:
@@ -292,7 +292,7 @@ def lint_histsize():
 
 
 @LintVariable('HISTFILESIZE')
-def lint_bash_histfilesize():
+def increase_histfilesize():
     """Advise user to try to keep more history!"""
     filesize_val = int(os.environ.get('HISTFILESIZE', '0'))
     if filesize_val < 5000:
@@ -302,7 +302,7 @@ def lint_bash_histfilesize():
 
 
 @LintVariable('HISTCONTROL')
-def lint_bash_save_dups():
+def dont_ignore_duplicates_in_bash():
     """Inform user about duplicates being removed."""
     histcontrol = os.environ.get('HISTCONTROL', '')
     if 'ignoredups' in histcontrol or 'erasedups' in histcontrol:
@@ -310,7 +310,7 @@ def lint_bash_save_dups():
 
 
 @LintVariable('SAVEHIST')
-def lint_zsh_savehist():
+def increase_savehist():
     """Advise user to try to keep more history!"""
     filesize_val = int(os.environ.get('SAVEHIST', '0'))
     if filesize_val < 5000:
@@ -380,24 +380,24 @@ def _print_command_stats(cmd, count, total):
     print("{}{}{}".format(cmd, percent, times))
 
 
-def _print_history_file():
-    print('Using history from "{}":'.format(_history_file()))
+def _print_history_file_stats():
+    print('Using history in "{}":'.format(_history_file()))
+
+    # Advise user to fix permissions on history file.
+    st_mode = os.stat(_history_file()).st_mode
+    if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
+        _warn(
+            'Other users can read your history! '
+            'Run "chmod 600 {}"'.format(_history_file()), )
 
     # Inform user of mean length of commands, number of arguments.
     commands = _commands()
-    output = "Commands average {} characters with ".format(
-        int(sum(len(cmd) for cmd in commands) / len(commands)))
+    cmd_length = int(sum(len(cmd) for cmd in commands) / len(commands))
     args = int(sum(len(cmd.split()) - 1 for cmd in commands) / len(commands))
+    output = "{} commands read, ".format(len(commands))
+    output += "averaging {} characters with ".format(cmd_length)
     output += '1 argument' if args == 1 else "{} arguments".format(args)
     _info(output)
-
-    # Advise user to fix permissions on history file.
-    history_file = _history_file()
-    st_mode = os.stat(history_file).st_mode
-    if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
-        _warn(
-            'Other users can read this file! '
-            'Run "chmod 600 {}"'.format(history_file), )
 
 
 def _history_file():
@@ -464,7 +464,7 @@ def main():
     report_overview()
     report_top_commands(commands)
     report_top_commands_with_args(commands)
-    report_miscellaneous(commands)
+    report_command_line(commands)
     report_shellcheck()
 
 
