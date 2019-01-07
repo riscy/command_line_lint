@@ -38,10 +38,15 @@ COLOR_TIP = '' if NO_COLOR else '\033[33m'
 
 # shellcheck errors and warnings that are not relevant;
 SC_IGNORE = [
+    1036,  # https://github.com/koalaman/shellcheck/wiki/SC1036
+    1078,  # https://github.com/koalaman/shellcheck/wiki/SC1078
+    1079,  # https://github.com/koalaman/shellcheck/wiki/SC1079
+    1088,  # https://github.com/koalaman/shellcheck/wiki/SC1088
     1089,  # https://github.com/koalaman/shellcheck/wiki/SC1089
     1090,  # https://github.com/koalaman/shellcheck/wiki/SC1090
     1091,  # https://github.com/koalaman/shellcheck/wiki/SC1091
-    1117,  # https://github.com/koalaman/shellcheck/wiki/SC1091
+    1117,  # https://github.com/koalaman/shellcheck/wiki/SC1117
+    2034,  # https://github.com/koalaman/shellcheck/wiki/SC2034
     2103,  # https://github.com/koalaman/shellcheck/wiki/SC2103
     2148,  # https://github.com/koalaman/shellcheck/wiki/SC2148
     2154,  # https://github.com/koalaman/shellcheck/wiki/SC2154
