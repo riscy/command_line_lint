@@ -5,7 +5,9 @@
 
 [[https://travis-ci.org/riscy/command_line_lint][https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
 
-[[file:img/screenshot.png]]
+
+# http://clipart-library.com/clipart/2018521.htm
+[[file:img/report_card.png]]
 
 * Description
   This script generates a report against your command-line history and suggests
@@ -21,7 +23,9 @@
   history anywhere.  It should be fairly portable, running on Python 2.7 or 3.4+
   and requiring "only" the standard library.
 
-  This is an early prototype and has weak support for shells besides bash.
+  This is an early prototype and primarily supports bash, sh, and zsh.
+
+  [[file:img/screenshot.png]]
 * Run
   Download [[https://raw.githubusercontent.com/riscy/command_line_lint/master/command_line_lint.py][command_line_lint.py]] and run it:
   #+begin_src
