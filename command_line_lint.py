@@ -407,6 +407,8 @@ def _history_file():
     elif os.environ.get('HISTFILE'):
         # typical zsh:
         history_file = os.path.join(home, os.environ.get('HISTFILE'))
+    elif _shell() == 'zsh':
+        history_file = os.path.join(home, '.zsh_history')
     elif _shell() == 'bash':
         history_file = os.path.join(home, '.bash_history')
     else:
