@@ -428,8 +428,14 @@ def _commands():
 
 
 def _normalize(cmd):
-    """Squash extra whitespace; drop command if it was a comment."""
+    """Squash extra whitespace"""
     cmd = ' '.join(cmd.split())
+
+    """Remove timestamps from commands in zsh's timestamped history"""
+    if _shell() == 'zsh':
+        cmd = re.sub('^: \d+:\d+;', '', cmd, count=1)
+
+    """Drop command if it was a comment."""
     return '' if cmd.startswith('#') else cmd
 
 
