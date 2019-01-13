@@ -28,7 +28,7 @@
   [[file:img/screenshot.png]]
 * Run
   Download [[https://raw.githubusercontent.com/riscy/command_line_lint/master/command_line_lint.py][command_line_lint.py]] and run it:
-  #+begin_src
+  #+begin_src bash
   python command_line_lint.py <history_file>  # python 2 or 3 is fine
   #+end_src
   The =<history_file>= argument is optional.  If omitted, a determination is
