@@ -23,6 +23,7 @@ import os
 import stat
 import sys
 import difflib
+import io
 from collections import Counter, defaultdict
 from subprocess import check_output, CalledProcessError
 
@@ -421,7 +422,7 @@ def _history_file():
 
 
 def _commands():
-    with open(_history_file(), errors="replace") as stream:
+    with io.open(_history_file(), errors='replace') as stream:
         return [
             _normalize(cmd) for cmd in stream.readlines() if _normalize(cmd)
         ]
