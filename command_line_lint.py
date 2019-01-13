@@ -421,7 +421,7 @@ def _history_file():
 
 
 def _commands():
-    with open(_history_file()) as stream:
+    with open(_history_file(), errors="replace") as stream:
         return [
             _normalize(cmd) for cmd in stream.readlines() if _normalize(cmd)
         ]
