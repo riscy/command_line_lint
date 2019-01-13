@@ -439,7 +439,7 @@ def _is_shellcheck_installed():
     try:
         check_output(['shellcheck', '-V'])
         return True
-    except CalledProcessError:
+    except OSError:
         return False
 
 
