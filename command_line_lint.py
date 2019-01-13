@@ -23,6 +23,7 @@ import os
 import stat
 import sys
 import difflib
+import io
 from collections import Counter, defaultdict
 from subprocess import check_output, CalledProcessError
 
@@ -405,8 +406,10 @@ def _history_file():
     if len(sys.argv) > 1:
         history_file = sys.argv[1]
     elif os.environ.get('HISTFILE'):
-        # typical zsh:
         history_file = os.path.join(home, os.environ.get('HISTFILE'))
+    # typical zsh:
+    elif _shell() == 'zsh':
+        history_file = os.path.join(home, '.zsh_history')
     elif _shell() == 'bash':
         history_file = os.path.join(home, '.bash_history')
     else:
@@ -419,15 +422,21 @@ def _history_file():
 
 
 def _commands():
-    with open(_history_file()) as stream:
+    with io.open(_history_file(), errors='replace') as stream:
         return [
             _normalize(cmd) for cmd in stream.readlines() if _normalize(cmd)
         ]
 
 
 def _normalize(cmd):
-    """Squash extra whitespace; drop command if it was a comment."""
+    # Squash extra whitespace
     cmd = ' '.join(cmd.split())
+
+    # Remove timestamps from commands in zsh's timestamped history
+    if _shell() == 'zsh':
+        cmd = re.sub(r'^: \d+:\d+;', '', cmd, count=1)
+
+    # Drop command if it was a comment.
     return '' if cmd.startswith('#') else cmd
 
 
