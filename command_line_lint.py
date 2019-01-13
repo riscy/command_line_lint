@@ -405,8 +405,8 @@ def _history_file():
     if len(sys.argv) > 1:
         history_file = sys.argv[1]
     elif os.environ.get('HISTFILE'):
-        # typical zsh:
         history_file = os.path.join(home, os.environ.get('HISTFILE'))
+    # typical zsh:
     elif _shell() == 'zsh':
         history_file = os.path.join(home, '.zsh_history')
     elif _shell() == 'bash':
@@ -428,14 +428,14 @@ def _commands():
 
 
 def _normalize(cmd):
-    """Squash extra whitespace"""
+    # Squash extra whitespace
     cmd = ' '.join(cmd.split())
 
-    """Remove timestamps from commands in zsh's timestamped history"""
+    # Remove timestamps from commands in zsh's timestamped history
     if _shell() == 'zsh':
-        cmd = re.sub('^: \d+:\d+;', '', cmd, count=1)
+        cmd = re.sub(r'^: \d+:\d+;', '', cmd, count=1)
 
-    """Drop command if it was a comment."""
+    # Drop command if it was a comment.
     return '' if cmd.startswith('#') else cmd
 
 
