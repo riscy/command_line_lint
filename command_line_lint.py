@@ -287,18 +287,19 @@ def ignore_short_commands(cmd):
 @LintVariable('HISTSIZE')
 def increase_histsize():
     """Advise user to try to keep more history!"""
-    histsize_val = int(os.environ.get('HISTSIZE', '0'))
-    if histsize_val < 5000:
+    if 0 <= sanitize_env_var('HISTSIZE') < 5000:
         _tip('Increase/set HISTSIZE to retain history')
 
 
 @LintVariable('HISTFILESIZE')
 def increase_histfilesize():
     """Advise user to try to keep more history!"""
-    filesize_val = int(os.environ.get('HISTFILESIZE', '0'))
-    if filesize_val < 5000:
+    filesize_val = sanitize_env_var('HISTFILESIZE')
+
+    if 0 <= filesize_val < 5000:
         _tip('Increase/set HISTFILESIZE to retain more history')
-    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
+
+    if filesize_val < sanitize_env_var('HISTSIZE'):
         _tip('Set HISTFILESIZE >= HISTSIZE')
 
 
@@ -314,10 +315,20 @@ def dont_ignore_duplicates_in_bash():
 def increase_savehist():
     """Advise user to try to keep more history!"""
     filesize_val = int(os.environ.get('SAVEHIST', '0'))
+
     if filesize_val < 5000:
         _tip('Increase/set SAVEHIST to retain more history')
-    if filesize_val < int(os.environ.get('HISTSIZE', '0')):
+
+    if filesize_val < sanitize_env_var('HISTSIZE'):
         _tip('Set SAVEHIST >= HISTSIZE')
+
+
+def sanitize_env_var(env_var):
+    """Sanitize the environment variable (e.g. if it is empty)"""
+    env_var = os.environ.get(env_var, '0')
+
+    # A value of -1 signifies unlimited size
+    return int(env_var) if re.match(r'^\d+$', env_var) else -1
 
 
 def lint_bash_options():
