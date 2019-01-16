@@ -139,7 +139,7 @@ def report_shellcheck(top_n=10):
 
 
 class LintVariable():
-    """Register functions that lint a command or command sequence."""
+    """Register functions that lint an environment variable."""
     # pylint: disable=bad-option-value,old-style-class
     # pylint: disable=too-few-public-methods
     lints = defaultdict(list)
@@ -152,6 +152,7 @@ class LintVariable():
 
     def __call__(self, lint):
         self.lints[self.variable].append(lint)
+        return lint
 
 
 class LintCommand():
@@ -174,6 +175,7 @@ class LintCommand():
             self._add_lint_for_frequent_command(lint)
         else:
             self._add_lint(lint)
+        return lint
 
     def _add_lint(self, lint):
         def lint_single(commands):
