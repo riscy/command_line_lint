@@ -49,6 +49,13 @@
     concurrent shell sessions can all add to your =.bash_history=.  If you use
     =zsh=, ~setopt appendhistory~ should be set likewise.
 
+  If you're linting a history file that comes from a different shell than the
+  one you're using, you can let the script know.  For example, .history comes
+  from a zsh session but you're using bash, you can write:
+  #+begin_src bash
+  SHELL=zsh python command_line_lint.py /path/to/.zsh_history
+  #+end_src
+
   This script supports the use of [[http://no-color.org][NO_COLOR]] to disable color output:
   #+begin_src bash
   NO_COLOR=1 python command_line_lint.py

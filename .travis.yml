@@ -14,11 +14,9 @@ python:
 
 install:
   - pip install pylint flake8
-  - echo mv long_name.txt long_name.csv >> ~/.bash_history
-  - echo mv long_name.txt long_name.csv >> ~/.bash_history
-  - echo cd '~' >> ~/.bash_history
 
 script:
-  - python command_line_lint.py
+  - SHELL=bash python command_line_lint.py test/example_bash_history
+  - SHELL=zsh  python command_line_lint.py test/example_zsh_history
   - pylint command_line_lint.py
   - flake8 command_line_lint.py
