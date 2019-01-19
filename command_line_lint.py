@@ -24,7 +24,7 @@ import stat
 import sys
 import difflib
 import io
-from distutils import spawn
+from distutils import spawn  # pylint: disable=no-name-in-module
 from collections import Counter, defaultdict
 from subprocess import check_output, CalledProcessError
 
