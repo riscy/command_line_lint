@@ -24,6 +24,7 @@ import stat
 import sys
 import difflib
 import io
+from distutils import spawn
 from collections import Counter, defaultdict
 from subprocess import check_output, CalledProcessError
 
@@ -337,21 +338,21 @@ def lint_bash_options():
     """Lint bash options."""
     if _shell() not in {'bash', 'sh'}:
         return
-    histappend = check_output([_shell(), '-i', '-c', 'shopt']).decode('utf-8')
+    histappend = _shell_exec(['-i', '-c', 'shopt'])
     if re.search(r'histappend[ \t]+off', histappend):
         _tip('Run "shopt -s histappend" to retain more history')
 
 
 def lint_zsh_options():
     """Lint zsh options."""
-    if _shell() != 'zsh':
+    if _shell() != 'zsh' or not spawn.find_executable('zsh'):
         return
-    setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
+    setopt = _shell_exec(['-i', '-c', 'setopt'])
     if 'noappendhistory' in setopt:
         _tip('Run "setopt appendhistory" to retain more history')
     if _shell() != 'zsh':
         return
-    setopt = check_output([_shell(), '-i', '-c', 'setopt']).decode('utf-8')
+    setopt = _shell_exec(['-i', '-c', 'setopt'])
     if 'histsavenodups' in setopt:
         _tip('Run "unsetopt HIST_SAVE_NO_DUPS" to retain more history')
 
@@ -455,6 +456,13 @@ def _normalize(cmd):
 
 def _shell():
     return os.path.basename(os.environ.get('SHELL'))
+
+
+def _shell_exec(args):
+    """Execute {args} interactively through the _shell()."""
+    if not spawn.find_executable(_shell()):
+        return ''
+    return check_output([_shell()] + args).decode('utf-8')
 
 
 def _is_shellcheck_installed():
