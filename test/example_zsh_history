@@ -1,3 +1,6 @@
 : 1547922035:0;mv long_name.txt long_name.csv
 : 1547922054:0;mv long_name.txt long_name.csv
 : 1547922056:0;cd ~
+: 1547922057:0;ls
+: 1547922058:0;ls
+: 1547922059:0;ls

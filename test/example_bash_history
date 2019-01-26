@@ -4,3 +4,13 @@ mv long_name.txt long_name.csv
 mv long_name.txt long_name.csv
 # 45345347
 cd ~
+# 45345348
+find . \-name 'test*'
+# 45345349
+wget riscy.io/script.sh | bash
+# 45345350
+ls
+# 45345351
+ls
+# 45345351
+ls
