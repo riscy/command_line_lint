@@ -230,7 +230,7 @@ def dont_pipe_wget_into_shell(cmd):
 
 @LintCommand()
 def reuse_common_substrings(cmd):
-    """Reuse parts of the argument list, when possible."""
+    """Reuse parts of the argument list within a command."""
     tokens = cmd.split()
     if len(tokens) != 3:
         return False
@@ -251,6 +251,22 @@ def reuse_common_substrings(cmd):
                 len(prefix) + 1)
             return True
     return False
+
+
+@LintCommand(num_commands_in_sequence=2)
+def reuse_suffix(commands):
+    """Reuse the entire argument list between commands."""
+    first_cmd, second_cmd = [cmd.split() for cmd in commands]
+    if (first_cmd == second_cmd or not first_cmd[1:] or not second_cmd[1:]
+            or first_cmd[1:] != second_cmd[1:]):
+        return False
+    shorter_cmd = ' '.join([second_cmd[0], '!$'])
+    if len(shorter_cmd) > len(' '.join(second_cmd)) / 2:
+        return False
+    print('; '.join(commands))
+    _tip('Try reusing the first command\'s suffix: "{}"'.format(shorter_cmd),
+         len(first_cmd[0]) + 1)
+    return True
 
 
 @LintCommand(num_commands_in_sequence=3)
