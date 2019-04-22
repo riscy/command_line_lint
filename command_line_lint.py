@@ -292,6 +292,19 @@ def consider_an_alias(cmd):
     _tip('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
 
 
+@LintCommand(num_commands_in_sequence=2)
+def consider_zless_or_zcat(commands):
+    """Suggest mkdir -p when appropriate."""
+    first_cmd, second_cmd = [cmd.split() for cmd in commands]
+    if (first_cmd[0] in ['gzip', 'uncompress']
+            and second_cmd[0] in ['cat', 'less']
+            and second_cmd[-1] in first_cmd[-1]):
+        print('; '.join(commands))
+        _tip('Consider zless or zcat: "zless {}"'.format(second_cmd[-1]))
+        return True
+    return False
+
+
 @LintCommand(only_if_frequently_used=True)
 def ignore_short_commands(cmd):
     """Advise ignoring frequent, short commands."""
