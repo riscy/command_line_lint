@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """Command-Line Lint --- lint your command-line history.
 
 Author: Chris Rayner (dchrisrayner@gmail.com)
