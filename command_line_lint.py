@@ -202,7 +202,7 @@ class LintCommand():
 def cd_to_home_directory(cmd):
     """Advise dropping superfluous arguments to cd."""
     if cmd in {'cd ~', 'cd ~/', 'cd $HOME'}:
-        print(cmd)
+        _show_commands(cmd)
         _tip('"cd" is sufficient to move to your home directory', arrow_at=3)
         return True
     return False
@@ -212,7 +212,7 @@ def cd_to_home_directory(cmd):
 def clear_has_keyboard_shortcut(cmd):
     """Advise using keyboard shortcuts when available."""
     if cmd in {'clear'}:
-        print(cmd)
+        _show_commands(cmd)
         _info('A common keyboard shortcut for "clear" is Ctrl-L')
         return True
     return False
@@ -222,7 +222,7 @@ def clear_has_keyboard_shortcut(cmd):
 def dont_pipe_wget_into_shell(cmd):
     """Advise user to avoid dangerous 'wget | sh'-style pipes."""
     if re.search(r'wget [^|]+\|\s*(bash|sh|zsh|tcsh|csh)', cmd):
-        print(cmd)
+        _show_commands(cmd)
         _warn("Don't pipe wget into a shell; mistakes can be costly",
               cmd.find('|'))
         return True
@@ -231,7 +231,7 @@ def dont_pipe_wget_into_shell(cmd):
 
 @LintCommand()
 def reuse_common_substrings(cmd):
-    """Reuse parts of the argument list, when possible."""
+    """Reuse parts of the argument list within a command."""
     tokens = cmd.split()
     if len(tokens) != 3:
         return False
@@ -245,7 +245,7 @@ def reuse_common_substrings(cmd):
             arg2[match.b + match.size:],
         )
         if float(len(prefix) + len(shorter_args) + 1) / len(cmd) <= 0.80:
-            print(cmd)
+            _show_commands(cmd)
             _tip(
                 'Arguments have common substrings; try: "{} {}"'.format(
                     prefix, shorter_args),
@@ -254,13 +254,29 @@ def reuse_common_substrings(cmd):
     return False
 
 
+@LintCommand(num_commands_in_sequence=2)
+def reuse_suffix(commands):
+    """Reuse the entire argument list between commands."""
+    first_cmd, second_cmd = [cmd.split() for cmd in commands]
+    if (first_cmd == second_cmd or not first_cmd[1:] or not second_cmd[1:]
+            or first_cmd[1:] != second_cmd[1:]):
+        return False
+    shorter_cmd = ' '.join([second_cmd[0], '!$'])
+    if len(shorter_cmd) > len(' '.join(second_cmd)) / 2:
+        return False
+    _show_commands(commands)
+    _tip('Try reusing the first command\'s suffix: "{}"'.format(shorter_cmd),
+         len(first_cmd[0]) + 1)
+    return True
+
+
 @LintCommand(num_commands_in_sequence=3)
 def dont_mkdir_cd_mkdir(commands):
     """Suggest mkdir -p when appropriate."""
     first_cmd, second_cmd, third_cmd = [cmd.split() for cmd in commands]
     if (first_cmd[0] == 'mkdir' and second_cmd[0] == 'cd'
             and first_cmd[-1] == second_cmd[-1] and third_cmd[0] == 'mkdir'):
-        print('; '.join(commands))
+        _show_commands(commands)
         _tip('Create nested directories with "mkdir -p {}/{}"'.format(
             first_cmd[-1], third_cmd[1]))
         return True
@@ -275,6 +291,19 @@ def consider_an_alias(cmd):
     suggestion = ''.join(
         word[0] for word in cmd.split() if re.match(r'\w', word))
     _tip('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
+
+
+@LintCommand(num_commands_in_sequence=2)
+def consider_zless_or_zcat(commands):
+    """Suggest mkdir -p when appropriate."""
+    first_cmd, second_cmd = [cmd.split() for cmd in commands]
+    if (first_cmd[0] in ['gzip', 'uncompress']
+            and second_cmd[0] in ['cat', 'less']
+            and second_cmd[-1] in first_cmd[-1]):
+        _show_commands(commands)
+        _tip('Consider zless or zcat: "zless {}"'.format(second_cmd[-1]))
+        return True
+    return False
 
 
 @LintCommand(only_if_frequently_used=True)
@@ -356,6 +385,13 @@ def lint_zsh_options():
     setopt = _shell_exec(['-i', '-c', 'setopt'])
     if 'histsavenodups' in setopt:
         _tip('Run "unsetopt HIST_SAVE_NO_DUPS" to retain more history')
+
+
+def _show_commands(commands):
+    if isinstance(commands, str):
+        print(commands)
+    elif isinstance(commands, list):
+        print('; '.join(commands))
 
 
 def _info(info, arrow_at=0):
