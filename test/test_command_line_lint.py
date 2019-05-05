@@ -9,9 +9,10 @@ class TestCommandLineLint(unittest.TestCase):
         self.reset()
         os.environ['NO_COLOR'] = '1'
         # pylint: disable=protected-access
-        command_line_lint._tip = self.mock_tip
-        command_line_lint._info = self.mock_tip
-        command_line_lint._warn = self.mock_tip
+        command_line_lint._tip = self.track_tip
+        command_line_lint._info = self.track_tip
+        command_line_lint._warn = self.track_tip
+        command_line_lint._show_commands = lambda noop: noop
 
     def test_increase_savehist(self):
         os.environ['SAVEHIST'] = '10'
@@ -58,5 +59,5 @@ class TestCommandLineLint(unittest.TestCase):
     def reset(self):
         self.tips = []
 
-    def mock_tip(self, tip, _arrow_at=0):
+    def track_tip(self, tip, _arrow_at=0):
         self.tips.append(tip)
