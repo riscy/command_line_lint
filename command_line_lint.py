@@ -6,7 +6,8 @@ Created: December 28 2018
 URL: https://github.com/riscy/command_line_lint
 Version: 0.0.0
 
-This software is licensed under the permissive MIT License.
+This software is licensed under the conditions described here:
+https://github.com/riscy/command_line_lint/blob/master/LICENSE
 
 This script generates a simple report against your command-line history and
 suggests workflow improvements.  It has the opinion that most of the commands
