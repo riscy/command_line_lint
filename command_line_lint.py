@@ -58,7 +58,7 @@ SC_IGNORE = [
 ]
 
 
-def report_overview():
+def report_overview():  # type: () -> None
     """Report on some common environment settings, etc."""
     _print_header("Overview", newline=False)
     _print_history_file_stats()
@@ -76,7 +76,7 @@ def report_overview():
         _print_environment_variable('HISTORY_IGNORE')
 
 
-def report_top_commands(commands, top_n=3):
+def report_top_commands(commands, top_n=3):  # type: (list, int) -> None
     """Report user's {top_n} favorite commands."""
     _print_header("Top {}".format(top_n))
     prefix_count = Counter(cmd.split()[0] for cmd in commands if ' ' in cmd)
@@ -84,7 +84,10 @@ def report_top_commands(commands, top_n=3):
         _print_command_stats(prefix, count, len(commands))
 
 
-def report_top_commands_with_args(commands, top_n=10):
+def report_top_commands_with_args(
+        commands,
+        top_n=10,
+):  # type: (list, int) -> None
     """Report user's {top_n} most common commands (with args)."""
     _print_header("Top {} with arguments".format(top_n))
     for cmd, count in Counter(commands).most_common(top_n):
@@ -94,7 +97,7 @@ def report_top_commands_with_args(commands, top_n=10):
                 lint(cmd, count, len(commands))
 
 
-def report_command_line(commands):
+def report_command_line(commands):  # type: (list) -> None
     """Miscellaneous tips to improve command-line usage."""
     _print_header('Command-line tips')
     for num, lints in LintCommand.lints.items():
@@ -104,7 +107,7 @@ def report_command_line(commands):
                 for ii in range(len(commands) - num + 1))
 
 
-def report_shellcheck(top_n=10):
+def report_shellcheck(top_n=10):  # type: (int) -> None
     """Report containing lints from 'Shellcheck'."""
     _print_header('Shellcheck')
 
@@ -127,7 +130,7 @@ def report_shellcheck(top_n=10):
     except CalledProcessError as err:
         # non-zero exit status means we may have found some warnings
         shellcheck_errors = err.output.decode('utf-8').strip().split('\n\n')
-    old_errors = set()
+    old_errors = set()  # type: set
     for error in shellcheck_errors:
         errors = (cc for cc in re.findall(r"SC([0-9]{4}):", error))
         new_errors = [cc for cc in errors if cc not in old_errors][:top_n]
@@ -145,7 +148,7 @@ class LintVariable():
     """Register functions that lint an environment variable."""
     # pylint: disable=bad-option-value,old-style-class
     # pylint: disable=too-few-public-methods
-    lints = defaultdict(list)
+    lints = defaultdict(list)  # type: defaultdict
 
     def __init__(
             self,
@@ -162,8 +165,8 @@ class LintCommand():
     """Register functions that lint a command or command sequence."""
     # pylint: disable=bad-option-value,old-style-class
     # pylint: disable=too-few-public-methods
-    lints = defaultdict(list)
-    favorite_lints = []
+    lints = defaultdict(list)  # type: defaultdict
+    favorite_lints = []  # type: list
 
     def __init__(
             self,
@@ -426,14 +429,14 @@ def _print_environment_variable(var, using=''):
         lint()
 
 
-def _print_command_stats(cmd, count, total):
+def _print_command_stats(cmd, count, total):  # type: (str, int, int) -> None
     cmd = cmd.ljust(39)
     percent = "{}%".format(round(100 * count / total, 1)).rjust(20)
     times = "{}/{}".format(count, total).rjust(20)
     print("{}{}{}".format(cmd, percent, times))
 
 
-def _print_history_file_stats():
+def _print_history_file_stats():  # type: () -> None
     print('Using history in "{}":'.format(_history_file()))
 
     # Advise user to fix permissions on history file.
@@ -452,12 +455,12 @@ def _print_history_file_stats():
     _info(output)
 
 
-def _history_file():
+def _history_file():  # type: () -> str
     home = os.path.expanduser('~')
     if len(sys.argv) > 1:
         history_file = sys.argv[1]
     elif os.environ.get('HISTFILE'):
-        history_file = os.path.join(home, os.environ.get('HISTFILE'))
+        history_file = os.path.join(home, str(os.environ.get('HISTFILE')))
     # typical zsh:
     elif _shell() == 'zsh':
         history_file = os.path.join(home, '.zsh_history')
@@ -472,14 +475,14 @@ def _history_file():
     return history_file
 
 
-def _commands():
+def _commands():  # type: () -> list
     with io.open(_history_file(), errors='replace') as stream:
         return [
             _normalize(cmd) for cmd in stream.readlines() if _normalize(cmd)
         ]
 
 
-def _normalize(cmd):
+def _normalize(cmd):  # type: (str) -> str
     # Squash extra whitespace
     cmd = ' '.join(cmd.split())
 
@@ -495,14 +498,14 @@ def _shell():
     return os.path.basename(os.environ.get('SHELL'))
 
 
-def _shell_exec(args):
+def _shell_exec(args):  # type: (list) -> str
     """Execute {args} interactively through the _shell()."""
     if not spawn.find_executable(_shell()):
         return ''
     return check_output([_shell()] + args).decode('utf-8')
 
 
-def _is_shellcheck_installed():
+def _is_shellcheck_installed():  # type: () -> bool
     try:
         check_output(['shellcheck', '-V'])
         return True
@@ -510,7 +513,7 @@ def _is_shellcheck_installed():
         return False
 
 
-def _is_ignored(cmd):
+def _is_ignored(cmd):  # type: (str) -> bool
     if _shell() == 'zsh':
         return cmd in re.split(r'[()|]', os.environ.get('HISTORY_IGNORE', ''))
     if _shell() in {'bash', 'sh'}:
@@ -518,7 +521,7 @@ def _is_ignored(cmd):
     return False
 
 
-def _remove_prefix(text, regexp):
+def _remove_prefix(text, regexp):  # type: (str, str) -> str
     match = re.search("^{}".format(regexp), text)
     if not match or not text.startswith(match.group(0)):
         return text
