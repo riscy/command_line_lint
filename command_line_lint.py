@@ -439,9 +439,8 @@ def _print_history_file_stats():
     # Advise user to fix permissions on history file.
     st_mode = os.stat(_history_file()).st_mode
     if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
-        _warn(
-            'Other users can read your history! '
-            'Run "chmod 600 {}"'.format(_history_file()), )
+        _warn('Other users can read your history! '
+              'Run "chmod 600 {}"'.format(_history_file()))
 
     # Inform user of mean length of commands, number of arguments.
     commands = _commands()
