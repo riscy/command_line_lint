@@ -84,10 +84,7 @@ def report_top_commands(commands, top_n=3):  # type: (list, int) -> None
         _print_command_stats(prefix, count, len(commands))
 
 
-def report_top_commands_with_args(
-        commands,
-        top_n=10,
-):  # type: (list, int) -> None
+def report_top_commands_with_args(commands, top_n=10):  # type: (list, int) -> None
     """Report user's {top_n} most common commands (with args)."""
     _print_header("Top {} with arguments".format(top_n))
     for cmd, count in Counter(commands).most_common(top_n):
@@ -102,9 +99,7 @@ def report_command_line(commands):  # type: (list) -> None
     _print_header('Command-line tips')
     for num, lints in LintCommand.lints.items():
         for lint in lints:
-            any(
-                lint(commands[ii:ii + num])
-                for ii in range(len(commands) - num + 1))
+            any(lint(commands[ii : ii + num]) for ii in range(len(commands) - num + 1))
 
 
 def report_shellcheck(top_n=10):  # type: (int) -> None
@@ -119,12 +114,14 @@ def report_shellcheck(top_n=10):  # type: (int) -> None
         print('<No support for {}; spoofing as bash>'.format(shell).center(79))
         shell = 'bash'
     try:
-        check_output([
-            'shellcheck',
-            "--exclude={}".format(','.join(str(cc) for cc in SC_IGNORE)),
-            "--shell={}".format(shell),
-            _history_file(),
-        ])
+        check_output(
+            [
+                'shellcheck',
+                "--exclude={}".format(','.join(str(cc) for cc in SC_IGNORE)),
+                "--shell={}".format(shell),
+                _history_file(),
+            ]
+        )
         print('Nothing to report.')
         return
     except CalledProcessError as err:
@@ -141,19 +138,18 @@ def report_shellcheck(top_n=10):  # type: (int) -> None
                     r'(\^-- .*)',
                     "{}\\1{}".format(COLOR_TIP, COLOR_DEFAULT),
                     _remove_prefix(error.strip(), r'In .* line .*:\n'),
-                ))
+                )
+            )
 
 
-class LintVariable():
+class LintVariable:
     """Register functions that lint an environment variable."""
+
     # pylint: disable=bad-option-value,old-style-class
     # pylint: disable=too-few-public-methods
     lints = defaultdict(list)  # type: defaultdict
 
-    def __init__(
-            self,
-            variable,
-    ):
+    def __init__(self, variable):
         self.variable = variable
 
     def __call__(self, lint):
@@ -161,18 +157,15 @@ class LintVariable():
         return lint
 
 
-class LintCommand():
+class LintCommand:
     """Register functions that lint a command or command sequence."""
+
     # pylint: disable=bad-option-value,old-style-class
     # pylint: disable=too-few-public-methods
     lints = defaultdict(list)  # type: defaultdict
     favorite_lints = []  # type: list
 
-    def __init__(
-            self,
-            num_commands_in_sequence=1,
-            only_if_frequently_used=False,
-    ):
+    def __init__(self, num_commands_in_sequence=1, only_if_frequently_used=False):
         self.num_commands_in_sequence = num_commands_in_sequence
         self.only_if_frequently_used = only_if_frequently_used
 
@@ -227,8 +220,7 @@ def dont_pipe_wget_into_shell(cmd):
     """Advise user to avoid dangerous 'wget | sh'-style pipes."""
     if re.search(r'wget [^|]+\|\s*(bash|sh|zsh|tcsh|csh)', cmd):
         _show_commands(cmd)
-        _warn("Don't pipe wget into a shell; mistakes can be costly",
-              cmd.find('|'))
+        _warn("Don't pipe wget into a shell; mistakes can be costly", cmd.find('|'))
         return True
     return False
 
@@ -240,20 +232,23 @@ def reuse_common_substrings(cmd):
     if len(tokens) != 3:
         return False
     prefix, arg1, arg2 = tokens
-    match = difflib.SequenceMatcher(a=arg1, b=arg2)\
-                   .find_longest_match(0, len(arg1), 0, len(arg2))
+    match = difflib.SequenceMatcher(a=arg1, b=arg2).find_longest_match(
+        0, len(arg1), 0, len(arg2)
+    )
     if match.a == 0 and match.b == 0:
         shorter_args = "{}{{{},{}}}".format(
-            arg1[match.a:match.a + match.size],
-            arg1[match.a + match.size:],
-            arg2[match.b + match.size:],
+            arg1[match.a : match.a + match.size],
+            arg1[match.a + match.size :],
+            arg2[match.b + match.size :],
         )
         if float(len(prefix) + len(shorter_args) + 1) / len(cmd) <= 0.80:
             _show_commands(cmd)
             _tip(
                 'Arguments have common substrings; try: "{} {}"'.format(
-                    prefix, shorter_args),
-                len(prefix) + 1)
+                    prefix, shorter_args
+                ),
+                len(prefix) + 1,
+            )
             return True
     return False
 
@@ -262,15 +257,21 @@ def reuse_common_substrings(cmd):
 def reuse_suffix(commands):
     """Reuse the entire argument list between commands."""
     first_cmd, second_cmd = [cmd.split() for cmd in commands]
-    if (first_cmd == second_cmd or not first_cmd[1:] or not second_cmd[1:]
-            or first_cmd[1:] != second_cmd[1:]):
+    if (
+        first_cmd == second_cmd
+        or not first_cmd[1:]
+        or not second_cmd[1:]
+        or first_cmd[1:] != second_cmd[1:]
+    ):
         return False
     shorter_cmd = ' '.join([second_cmd[0], '!$'])
     if len(shorter_cmd) > len(' '.join(second_cmd)) / 2:
         return False
     _show_commands(commands)
-    _tip('Try reusing the first command\'s suffix: "{}"'.format(shorter_cmd),
-         len(first_cmd[0]) + 1)
+    _tip(
+        'Try reusing the first command\'s suffix: "{}"'.format(shorter_cmd),
+        len(first_cmd[0]) + 1,
+    )
     return True
 
 
@@ -278,11 +279,18 @@ def reuse_suffix(commands):
 def dont_mkdir_cd_mkdir(commands):
     """Suggest mkdir -p when appropriate."""
     first_cmd, second_cmd, third_cmd = [cmd.split() for cmd in commands]
-    if (first_cmd[0] == 'mkdir' and second_cmd[0] == 'cd'
-            and first_cmd[-1] == second_cmd[-1] and third_cmd[0] == 'mkdir'):
+    if (
+        first_cmd[0] == 'mkdir'
+        and second_cmd[0] == 'cd'
+        and first_cmd[-1] == second_cmd[-1]
+        and third_cmd[0] == 'mkdir'
+    ):
         _show_commands(commands)
-        _tip('Create nested directories with "mkdir -p {}/{}"'.format(
-            first_cmd[-1], third_cmd[1]))
+        _tip(
+            'Create nested directories with "mkdir -p {}/{}"'.format(
+                first_cmd[-1], third_cmd[1]
+            )
+        )
         return True
     return False
 
@@ -292,8 +300,7 @@ def consider_an_alias(cmd):
     """Suggest an alias."""
     if len(cmd) < 5:
         return
-    suggestion = ''.join(
-        word[0] for word in cmd.split() if re.match(r'\w', word))
+    suggestion = ''.join(word[0] for word in cmd.split() if re.match(r'\w', word))
     _tip('Consider using an alias: alias {}="{}"'.format(suggestion, cmd))
 
 
@@ -301,9 +308,11 @@ def consider_an_alias(cmd):
 def consider_zless_or_zcat(commands):
     """Suggest mkdir -p when appropriate."""
     first_cmd, second_cmd = [cmd.split() for cmd in commands]
-    if (first_cmd[0] in ['gzip', 'uncompress']
-            and second_cmd[0] in ['cat', 'less']
-            and second_cmd[-1] in first_cmd[-1]):
+    if (
+        first_cmd[0] in ['gzip', 'uncompress']
+        and second_cmd[0] in ['cat', 'less']
+        and second_cmd[-1] in first_cmd[-1]
+    ):
         _show_commands(commands)
         _tip('Consider zless or zcat: "zless {}"'.format(second_cmd[-1]))
         return True
@@ -442,8 +451,10 @@ def _print_history_file_stats():  # type: () -> None
     # Advise user to fix permissions on history file.
     st_mode = os.stat(_history_file()).st_mode
     if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
-        _warn('Other users can read your history! '
-              'Run "chmod 600 {}"'.format(_history_file()))
+        _warn(
+            'Other users can read your history! '
+            'Run "chmod 600 {}"'.format(_history_file())
+        )
 
     # Inform user of mean length of commands, number of arguments.
     commands = _commands()
@@ -477,9 +488,7 @@ def _history_file():  # type: () -> str
 
 def _commands():  # type: () -> list
     with io.open(_history_file(), errors='replace') as stream:
-        return [
-            _normalize(cmd) for cmd in stream.readlines() if _normalize(cmd)
-        ]
+        return [_normalize(cmd) for cmd in stream.readlines() if _normalize(cmd)]
 
 
 def _normalize(cmd):  # type: (str) -> str
@@ -525,7 +534,7 @@ def _remove_prefix(text, regexp):  # type: (str, str) -> str
     match = re.search("^{}".format(regexp), text)
     if not match or not text.startswith(match.group(0)):
         return text
-    return text[len(match.group(0)):]
+    return text[len(match.group(0)) :]
 
 
 def main():

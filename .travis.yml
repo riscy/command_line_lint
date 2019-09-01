@@ -18,4 +18,5 @@ install:
 script:
   - SHELL=bash python command_line_lint.py test/example_bash_history
   - SHELL=zsh  python command_line_lint.py test/example_zsh_history
+  - black -S command_line_lint.py
   - make test
