@@ -1,0 +1,24 @@
+name: test
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [2.7, 3.4, 3.5, 3.6, 3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install
+      run: |
+        python -m pip install -r requirements-development.txt
+    - name: Test
+      run: |
+        make test
+        black -S command_line_lint.py
+        SHELL=bash python command_line_lint.py test/example_bash_history
+        SHELL=zsh  python command_line_lint.py test/example_zsh_history

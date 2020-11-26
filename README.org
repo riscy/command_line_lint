@@ -3,8 +3,7 @@
 #+AUTHOR: Chris Rayner
 #+EMAIL: dchrisrayner@gmail.com
 
-[[https://travis-ci.org/riscy/command_line_lint][https://travis-ci.org/riscy/command_line_lint.svg?branch=master]]
-
+[[https://github.com/riscy/command_line_lint/actions][https://github.com/riscy/command_line_lint/workflows/test/badge.svg]]
 
 # http://clipart-library.com/clipart/2018521.htm
 [[file:img/report_card.png]]
