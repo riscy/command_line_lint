@@ -430,7 +430,7 @@ def _print_header(header, newline=True):
 
 
 def _print_environment_variable(var, using=''):
-    value = '"' + os.environ.get(var) + '"' if var in os.environ else 'UNSET'
+    value = '"' + os.environ[var] + '"' if var in os.environ else 'UNSET'
     if using:
         value += ' (using "{}")'.format(using)
     print("{}=> {}".format(var.ljust(20), value))
@@ -504,7 +504,7 @@ def _normalize(cmd):  # type: (str) -> str
 
 
 def _shell():
-    return os.path.basename(os.environ.get('SHELL'))
+    return os.path.basename(os.environ['SHELL'])
 
 
 def _shell_exec(args):  # type: (list) -> str
