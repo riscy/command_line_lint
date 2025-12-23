@@ -144,8 +144,6 @@ def report_shellcheck(top_n=10):  # type: (int) -> None
 class LintVariable:
     """Register functions that lint an environment variable."""
 
-    # pylint: disable=bad-option-value,old-style-class
-    # pylint: disable=too-few-public-methods
     lints = defaultdict(list)  # type: defaultdict
 
     def __init__(self, variable):
@@ -159,8 +157,6 @@ class LintVariable:
 class LintCommand:
     """Register functions that lint a command or command sequence."""
 
-    # pylint: disable=bad-option-value,old-style-class
-    # pylint: disable=too-few-public-methods
     lints = defaultdict(list)  # type: defaultdict
     favorite_lints = []  # type: list
 
@@ -452,7 +448,7 @@ def _print_history_file_stats():  # type: () -> None
     if st_mode & stat.S_IROTH or st_mode & stat.S_IRGRP:
         _warn(
             'Other users can read your history! '
-            'Run "chmod 600 {}"'.format(_history_file())
+            + 'Run "chmod 600 {}"'.format(_history_file())
         )
 
     # Inform user of mean length of commands, number of arguments.

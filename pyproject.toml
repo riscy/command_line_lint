@@ -1,0 +1,10 @@
+[tool.mypy]
+check_untyped_defs = true
+namespace_packages = true
+strict_equality = true
+warn_return_any = true
+warn_unreachable = true
+warn_unused_configs = true
+
+[tool.ruff.format]
+quote-style = "preserve"

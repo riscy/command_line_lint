@@ -14,7 +14,7 @@ jobs:
         python -m pip install -r requirements-development.txt
     - name: Test
       run: |
-        make test
-        black -S command_line_lint.py
-        pylint command_line_lint.py
-        mypy command_line_lint.py
+        python -m pytest --doctest-modules
+        ruff check .
+        ruff format --check .
+        mypy .
