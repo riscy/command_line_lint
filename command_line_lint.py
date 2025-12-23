@@ -18,15 +18,14 @@ you type should be simple and require minimal typing.  The report will contain:
 - a subset of lints from Shellcheck (if it's installed); many of these are
   useful and can warn against dangerous habits
 """
-from __future__ import print_function
 
 import re
 import os
+import shutil
 import stat
 import sys
 import difflib
 import io
-from distutils import spawn  # pylint: disable=no-name-in-module
 from collections import Counter, defaultdict
 from subprocess import check_output, CalledProcessError
 
@@ -388,7 +387,7 @@ def lint_bash_options():
 
 def lint_zsh_options():
     """Lint zsh options."""
-    if _shell() != 'zsh' or not spawn.find_executable('zsh'):
+    if _shell() != 'zsh' or not shutil.which('zsh'):
         return
     setopt = _shell_exec(['-i', '-c', 'setopt'])
     if 'noappendhistory' in setopt:
@@ -509,7 +508,7 @@ def _shell():
 
 def _shell_exec(args):  # type: (list) -> str
     """Execute {args} interactively through the _shell()."""
-    if not spawn.find_executable(_shell()):
+    if not shutil.which(_shell()):
         return ''
     return check_output([_shell()] + args).decode('utf-8')
 
